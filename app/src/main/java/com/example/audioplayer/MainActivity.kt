@@ -102,15 +102,13 @@ class MainActivity : AppCompatActivity() {
                     audioTrack?.play()
                     while (audioTrack != null) {
                         val len = dis.read(bytes)
-                        if (len > 0) {
-                            audioTrack?.write(bytes, 0, len)
-                        }
+                        if (len > 0) audioTrack!!.write(bytes, 0, len)
                     }
                 } catch (e: FileNotFoundException) {
                     Log.e(LOG_TAG, "$RAW_AUDIO_FILE not found.")
                     e.printStackTrace()
                 } catch (e: Exception) {
-                    Log.e(LOG_TAG, "Exception while read data from $RAW_AUDIO_FILE")
+                    Log.e(LOG_TAG, "Exception: ")
                     e.printStackTrace()
                 } finally {
                     try {
