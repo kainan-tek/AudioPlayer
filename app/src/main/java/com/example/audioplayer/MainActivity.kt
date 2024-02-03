@@ -25,6 +25,7 @@ class MainActivity : AppCompatActivity() {
         private const val USAGE = AudioAttributes.USAGE_MEDIA
         private const val CONTENT = AudioAttributes.CONTENT_TYPE_MUSIC
         private const val TRANSFER_MODE = AudioTrack.MODE_STREAM
+        private const val PERF_MODE = AudioTrack.PERFORMANCE_MODE_NONE
         private const val SAMPLE_RATE = 16000
         private const val CHANNEL_MASK = AudioFormat.CHANNEL_IN_STEREO
         private const val ENCODING = AudioFormat.ENCODING_PCM_16BIT
@@ -37,21 +38,10 @@ class MainActivity : AppCompatActivity() {
         val button1: Button = findViewById(R.id.button1)
         val button2: Button = findViewById(R.id.button2)
         button1.setOnClickListener {
-            Log.i(LOG_TAG,"start AudioPlayback, isStart: $isStart, isStop: $isStop")
-            if (isStop) {
-                initAudioPlayback()
                 startAudioPlayback()
-                isStart = true
-                isStop = false
-            }
         }
         button2.setOnClickListener {
-            Log.i(LOG_TAG,"stop AudioPlayback, isStart: $isStart, isStop: $isStop")
-            if (isStart) {
-                stopAudioPlayback()
-                isStop = true
-                isStart = false
-            }
+            stopAudioPlayback()
         }
     }
 
@@ -77,6 +67,7 @@ class MainActivity : AppCompatActivity() {
                     .setEncoding(ENCODING)
                     .build()
             )
+            .setPerformanceMode(PERF_MODE)
             .setTransferMode(TRANSFER_MODE)
             .setBufferSizeInBytes(bufferSizeInBytes*2)
             .build()
@@ -89,6 +80,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startAudioPlayback() {
+        Log.i(LOG_TAG,"start AudioPlayback, isStart: $isStart, isStop: $isStop")
+        if (!isStop){
+            Log.i(LOG_TAG,"in playing status, needn't start play again")
+            return
+        }
+        initAudioPlayback()
         class AudioTrackThread: Thread() {
             override fun run() {
                 super.run()
@@ -102,7 +99,11 @@ class MainActivity : AppCompatActivity() {
                     audioTrack?.play()
                     while (audioTrack != null) {
                         val len = dis.read(bytes)
-                        if (len > 0) audioTrack!!.write(bytes, 0, len)
+                        if (len > 0) {
+                            audioTrack!!.write(bytes, 0, len)
+                        } else if(len == -1){
+                            stopAudioPlayback()
+                        }
                     }
                 } catch (e: FileNotFoundException) {
                     Log.e(LOG_TAG, "$RAW_AUDIO_FILE not found.")
@@ -119,13 +120,20 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-
         AudioTrackThread().start()
+        isStart = true
+        isStop = false
     }
 
     private fun stopAudioPlayback() {
-        audioTrack?.stop()
-        audioTrack?.release()
-        audioTrack = null
+        Log.i(LOG_TAG,"stop AudioPlayback, isStart: $isStart, isStop: $isStop")
+        if(isStart) {
+            audioTrack?.stop()
+            audioTrack?.flush()
+            audioTrack?.release()
+            audioTrack = null
+            isStop = true
+            isStart = false
+        }
     }
 }
