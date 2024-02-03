@@ -113,11 +113,11 @@ class MainActivity : AppCompatActivity() {
                     Log.e(LOG_TAG, "Exception while read data from $RAW_AUDIO_FILE")
                     e.printStackTrace()
                 } finally {
-                        try {
-                            fileInputStream?.close()
-                        } catch (e: IOException) {
-                            e.printStackTrace()
-                        }
+                    try {
+                        fileInputStream?.close()
+                    } catch (e: IOException) {
+                        e.printStackTrace()
+                    }
                 }
             }
         }
