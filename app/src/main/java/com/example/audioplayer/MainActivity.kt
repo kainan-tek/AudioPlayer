@@ -14,7 +14,6 @@ import java.io.IOException
 
 class MainActivity : AppCompatActivity() {
     private var isStart = false
-    private var isStop = true
     private var bufferSizeInBytes = 0
     private var audioTrack: AudioTrack? = null
 
@@ -37,7 +36,7 @@ class MainActivity : AppCompatActivity() {
         val button1: Button = findViewById(R.id.button1)
         val button2: Button = findViewById(R.id.button2)
         button1.setOnClickListener {
-                startAudioPlayback()
+            startAudioPlayback()
         }
         button2.setOnClickListener {
             stopAudioPlayback()
@@ -79,12 +78,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startAudioPlayback() {
-        Log.i(LOG_TAG,"start AudioPlayback, isStart: $isStart, isStop: $isStop")
-        if (!isStop){
-            Log.i(LOG_TAG,"in playing status, needn't start play again")
+        Log.i(LOG_TAG,"start AudioPlayback, isStart: $isStart")
+        if (isStart){
+            Log.i(LOG_TAG,"in playing status, needn't start again")
             return
         }
-        initAudioPlayback()
         class AudioTrackThread: Thread() {
             override fun run() {
                 super.run()
@@ -116,19 +114,18 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+        initAudioPlayback()
         AudioTrackThread().start()
         isStart = true
-        isStop = false
     }
 
     private fun stopAudioPlayback() {
-        Log.i(LOG_TAG,"stop AudioPlayback, isStart: $isStart, isStop: $isStop")
+        Log.i(LOG_TAG,"stop AudioPlayback, isStart: $isStart")
         if(isStart) {
             audioTrack?.stop()
             audioTrack?.flush()
             audioTrack?.release()
             audioTrack = null
-            isStop = true
             isStart = false
         }
     }
