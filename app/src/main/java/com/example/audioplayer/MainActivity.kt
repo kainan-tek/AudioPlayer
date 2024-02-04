@@ -10,7 +10,6 @@ import android.widget.Button
 import java.io.BufferedInputStream
 import java.io.DataInputStream
 import java.io.FileInputStream
-import java.io.FileNotFoundException
 import java.io.IOException
 
 class MainActivity : AppCompatActivity() {
@@ -105,9 +104,6 @@ class MainActivity : AppCompatActivity() {
                             stopAudioPlayback()
                         }
                     }
-                } catch (e: FileNotFoundException) {
-                    Log.e(LOG_TAG, "$RAW_AUDIO_FILE not found.")
-                    e.printStackTrace()
                 } catch (e: Exception) {
                     Log.e(LOG_TAG, "Exception: ")
                     e.printStackTrace()
