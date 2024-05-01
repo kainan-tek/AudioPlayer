@@ -14,7 +14,8 @@ import java.io.IOException
 
 class MainActivity : AppCompatActivity() {
     private var isStart = false
-    private var bufferSizeInBytes = 0
+    private var minBufSizeInBytes = 0
+    private var numOfMinBuf = 2
     private var audioTrack: AudioTrack? = null
 
     companion object {
@@ -44,12 +45,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initAudioPlayback() {
-        bufferSizeInBytes = AudioTrack.getMinBufferSize(
+        minBufSizeInBytes = AudioTrack.getMinBufferSize(
             SAMPLE_RATE,
             CHANNEL_MASK,
             ENCODING
         )
-        Log.i(LOG_TAG, "audioTrack getMinBufferSize: $bufferSizeInBytes")
+        Log.i(LOG_TAG, "audioTrack getMinBufferSize: $minBufSizeInBytes")
 
         audioTrack = AudioTrack.Builder()
             .setAudioAttributes(
@@ -67,7 +68,7 @@ class MainActivity : AppCompatActivity() {
             )
             .setPerformanceMode(PERF_MODE)
             .setTransferMode(TRANSFER_MODE)
-            .setBufferSizeInBytes(bufferSizeInBytes*2)
+            .setBufferSizeInBytes(minBufSizeInBytes * numOfMinBuf)
             .build()
         Log.i(LOG_TAG, "set audioTrack params: " +
                 "Usage ${USAGE}， " +
@@ -91,7 +92,7 @@ class MainActivity : AppCompatActivity() {
                 try {
                     fileInputStream = FileInputStream(RAW_AUDIO_FILE)
                     val dis = DataInputStream(BufferedInputStream(fileInputStream))
-                    val bytes = ByteArray(bufferSizeInBytes*2)
+                    val bytes = ByteArray(minBufSizeInBytes * numOfMinBuf)
 
                     audioTrack?.play()
                     while (audioTrack != null) {
