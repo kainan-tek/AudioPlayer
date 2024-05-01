@@ -20,12 +20,12 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val LOG_TAG = "AudioPlayer"
-        private const val RAW_AUDIO_FILE = "/data/16k_2ch_16bit.raw"
+        private const val RAW_AUDIO_FILE = "/data/48k_2ch_16bit.raw"
         private const val USAGE = AudioAttributes.USAGE_MEDIA
         private const val CONTENT = AudioAttributes.CONTENT_TYPE_MUSIC
         private const val TRANSFER_MODE = AudioTrack.MODE_STREAM
         private const val PERF_MODE = AudioTrack.PERFORMANCE_MODE_NONE
-        private const val SAMPLE_RATE = 16000
+        private const val SAMPLE_RATE = 48000
         private const val CHANNEL_MASK = AudioFormat.CHANNEL_IN_STEREO
         private const val ENCODING = AudioFormat.ENCODING_PCM_16BIT
     }
