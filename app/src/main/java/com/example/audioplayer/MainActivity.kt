@@ -1,12 +1,12 @@
 package com.example.audioplayer
 
-import androidx.appcompat.app.AppCompatActivity
-import android.os.Bundle
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
+import android.os.Bundle
 import android.util.Log
 import android.widget.Button
+import androidx.appcompat.app.AppCompatActivity
 import java.io.BufferedInputStream
 import java.io.DataInputStream
 import java.io.FileInputStream
@@ -94,13 +94,21 @@ class MainActivity : AppCompatActivity() {
                     val dis = DataInputStream(BufferedInputStream(fileInputStream))
                     val bytes = ByteArray(minBufSizeInBytes * numOfMinBuf)
 
-                    audioTrack?.play()
+
+                    if (audioTrack!!.state != AudioTrack.PLAYSTATE_PLAYING) {
+                        audioTrack!!.play()
+                        sleep(5)
+                    }
                     while (audioTrack != null) {
-                        val len = dis.read(bytes)
-                        if (len > 0) {
-                            audioTrack!!.write(bytes, 0, len)
-                        } else if(len == -1){
-                            stopAudioPlayback()
+                        if (isStart) {
+                            val len = dis.read(bytes)
+                            if (len > 0) {
+                                audioTrack!!.write(bytes, 0, len)
+                            } else if (len == -1) {
+                                isStart = false
+                            }
+                        } else {
+                            stopPlayback()
                         }
                     }
                 } catch (e: Exception) {
@@ -116,18 +124,20 @@ class MainActivity : AppCompatActivity() {
             }
         }
         initAudioPlayback()
-        AudioTrackThread().start()
         isStart = true
+        AudioTrackThread().start()
     }
 
     private fun stopAudioPlayback() {
         Log.i(LOG_TAG,"stop AudioPlayback, isStart: $isStart")
-        if(isStart) {
-            audioTrack?.stop()
-            audioTrack?.flush()
-            audioTrack?.release()
-            audioTrack = null
+        if (isStart) {
             isStart = false
         }
+    }
+
+    private fun stopPlayback() {
+        audioTrack?.stop()
+        audioTrack?.release()
+        audioTrack = null
     }
 }
