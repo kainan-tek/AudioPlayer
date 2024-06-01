@@ -14,8 +14,10 @@ import java.io.IOException
 
 class MainActivity : AppCompatActivity() {
     private var isStart = false
-    private var minBufSizeInBytes = 0
     private var numOfMinBuf = 2
+    private var bytesPerSample = 0
+    private var channelsPerFrame = 0
+    private var minBufferSizeInFrames = 0
     private var audioTrack: AudioTrack? = null
 
     companion object {
@@ -45,11 +47,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initAudioPlayback() {
-        minBufSizeInBytes = AudioTrack.getMinBufferSize(
+        val minBufSizeInBytes = AudioTrack.getMinBufferSize(
             SAMPLE_RATE,
             CHANNEL_MASK,
-            ENCODING
-        )
+            ENCODING)
         Log.i(LOG_TAG, "audioTrack getMinBufferSize: $minBufSizeInBytes")
 
         audioTrack = AudioTrack.Builder()
@@ -57,25 +58,50 @@ class MainActivity : AppCompatActivity() {
                 AudioAttributes.Builder()
                     .setUsage(USAGE)
                     .setContentType(CONTENT)
-                    .build()
-            )
+                    .build())
             .setAudioFormat(
                 AudioFormat.Builder()
                     .setSampleRate(SAMPLE_RATE)
                     .setChannelMask(CHANNEL_MASK)
                     .setEncoding(ENCODING)
-                    .build()
-            )
+                    .build())
             .setPerformanceMode(PERF_MODE)
             .setTransferMode(TRANSFER_MODE)
             .setBufferSizeInBytes(minBufSizeInBytes * numOfMinBuf)
             .build()
+
+        channelsPerFrame = audioTrack!!.channelCount
+        bytesPerSample = when (audioTrack!!.audioFormat) {
+            AudioFormat.ENCODING_PCM_8BIT -> 1
+            AudioFormat.ENCODING_PCM_16BIT, AudioFormat.ENCODING_IEC61937, AudioFormat.ENCODING_DEFAULT -> 2
+            AudioFormat.ENCODING_PCM_24BIT_PACKED -> 3
+            AudioFormat.ENCODING_PCM_FLOAT, AudioFormat.ENCODING_PCM_32BIT -> 4
+            else -> 2
+        }
+
+        minBufferSizeInFrames = minBufSizeInBytes / channelsPerFrame / bytesPerSample
+        minBufferSizeInFrames -= minBufferSizeInFrames % (SAMPLE_RATE / 1000)
+        audioTrack!!.setBufferSizeInFrames(numOfMinBuf * minBufferSizeInFrames)
         Log.i(LOG_TAG, "set audioTrack params: " +
                 "Usage ${USAGE}， " +
                 "ContentType ${CONTENT}， " +
                 "SampleRate $SAMPLE_RATE， " +
                 "ChannelMask ${CHANNEL_MASK}， " +
-                "Encoding $ENCODING")
+                "Encoding $ENCODING, " +
+                "BufferSizeInFrames ${audioTrack!!.bufferSizeInFrames}")
+
+        // specify the device address with setPreferredDevice
+        /*
+        val audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
+        val devices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+        for (device in devices) {
+            Log.i(LOG_TAG,"device address: ${device.address}")
+            if (device.address == "bus0_media_out"){
+                audioTrack!!.setPreferredDevice(device)
+                break
+            }
+        }
+        */
     }
 
     private fun startAudioPlayback() {
@@ -92,8 +118,7 @@ class MainActivity : AppCompatActivity() {
                 try {
                     fileInputStream = FileInputStream(RAW_AUDIO_FILE)
                     val dis = DataInputStream(BufferedInputStream(fileInputStream))
-                    val bytes = ByteArray(minBufSizeInBytes * numOfMinBuf)
-
+                    val bytes = ByteArray(minBufferSizeInFrames * channelsPerFrame * bytesPerSample)
 
                     if (audioTrack!!.state != AudioTrack.PLAYSTATE_PLAYING) {
                         audioTrack!!.play()
