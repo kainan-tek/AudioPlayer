@@ -1,7 +1,9 @@
 package com.example.audioplayer
 
 import android.media.AudioAttributes
+import android.media.AudioFocusRequest
 import android.media.AudioFormat
+import android.media.AudioManager
 import android.media.AudioTrack
 import android.os.Bundle
 import android.util.Log
@@ -13,25 +15,6 @@ import java.io.FileInputStream
 import java.io.IOException
 
 class MainActivity : AppCompatActivity() {
-    private var isStart = false
-    private var numOfMinBuf = 2
-    private var bytesPerSample = 0
-    private var channelsPerFrame = 0
-    private var minBufferSizeInFrames = 0
-    private var audioTrack: AudioTrack? = null
-
-    companion object {
-        private const val LOG_TAG = "AudioPlayer"
-        private const val RAW_AUDIO_FILE = "/data/48k_2ch_16bit.raw"
-        private const val USAGE = AudioAttributes.USAGE_MEDIA
-        private const val CONTENT = AudioAttributes.CONTENT_TYPE_MUSIC
-        private const val TRANSFER_MODE = AudioTrack.MODE_STREAM
-        private const val PERF_MODE = AudioTrack.PERFORMANCE_MODE_NONE
-        private const val SAMPLE_RATE = 48000
-        private const val CHANNEL_MASK = AudioFormat.CHANNEL_IN_STEREO
-        private const val ENCODING = AudioFormat.ENCODING_PCM_16BIT
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -46,7 +29,84 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun initAudioPlayback() {
+
+    companion object {
+        private const val LOG_TAG = "AudioPlayer"
+        private const val RAW_AUDIO_FILE = "/data/48k_2ch_16bit.raw"
+        private const val USAGE = AudioAttributes.USAGE_MEDIA
+        private const val CONTENT = AudioAttributes.CONTENT_TYPE_MUSIC
+        private const val TRANSFER_MODE = AudioTrack.MODE_STREAM
+        private const val PERF_MODE = AudioTrack.PERFORMANCE_MODE_NONE
+        private const val SAMPLE_RATE = 48000
+        private const val CHANNEL_MASK = AudioFormat.CHANNEL_IN_STEREO
+        private const val ENCODING = AudioFormat.ENCODING_PCM_16BIT
+
+        private var isStart = false
+        private var numOfMinBuf = 2
+        private var bytesPerSample = 0
+        private var channelsPerFrame = 0
+        private var minBufferSizeInFrames = 0
+        private var audioTrack: AudioTrack? = null
+        private var audioManager: AudioManager? = null
+        private var focusRequest: AudioFocusRequest? = null
+    }
+
+    private fun startAudioPlayback() {
+        if (isStart){
+            Log.i(LOG_TAG,"in playing status, needn't start again")
+            return
+        }
+        Log.i(LOG_TAG,"start AudioPlayback.")
+        isStart = true
+        initPlayback()
+        startPlayback()
+    }
+
+    private fun stopAudioPlayback() {
+        if (!isStart){
+            Log.i(LOG_TAG,"in stop status, needn't stop again")
+            return
+        }
+        Log.i(LOG_TAG,"stop AudioPlayback")
+        isStart = false
+    }
+
+    private fun initPlayback() {
+        audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
+        val audioAttributes = AudioAttributes.Builder()
+            .setUsage(USAGE)
+            .setContentType(CONTENT)
+            .build()
+
+        val focusChangeListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
+            when (focusChange) {
+                AudioManager.AUDIOFOCUS_GAIN ->  // recover play
+                    audioTrack?.setVolume(1.0f)
+                    // startAudioPlayback()  // TBD
+                AudioManager.AUDIOFOCUS_LOSS ->  // pause play
+                    isStart = false  // stop
+                    // stopPlayback()
+                AudioManager.AUDIOFOCUS_LOSS_TRANSIENT ->  // pause play
+                    isStart = false  // stop
+                    // stopPlayback()
+                AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK ->  // duck
+                    audioTrack?.setVolume(0.5f)
+            }
+        }
+
+        focusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+            .setAudioAttributes(audioAttributes)
+            .setOnAudioFocusChangeListener(focusChangeListener)
+            .build()
+
+        val result = audioManager!!.requestAudioFocus(focusRequest!!)
+        if (result != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+            Log.e(LOG_TAG, "audioManager requestAudioFocus failed")
+            isStart = false
+            return
+        }
+        Log.i(LOG_TAG, "audioManager requestAudioFocus success")
+
         val minBufSizeInBytes = AudioTrack.getMinBufferSize(
             SAMPLE_RATE,
             CHANNEL_MASK,
@@ -54,11 +114,7 @@ class MainActivity : AppCompatActivity() {
         Log.i(LOG_TAG, "audioTrack getMinBufferSize: $minBufSizeInBytes")
 
         audioTrack = AudioTrack.Builder()
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(USAGE)
-                    .setContentType(CONTENT)
-                    .build())
+            .setAudioAttributes(audioAttributes)
             .setAudioFormat(
                 AudioFormat.Builder()
                     .setSampleRate(SAMPLE_RATE)
@@ -78,7 +134,6 @@ class MainActivity : AppCompatActivity() {
             AudioFormat.ENCODING_PCM_FLOAT, AudioFormat.ENCODING_PCM_32BIT -> 4
             else -> 2
         }
-
         minBufferSizeInFrames = minBufSizeInBytes / channelsPerFrame / bytesPerSample
         minBufferSizeInFrames -= minBufferSizeInFrames % (SAMPLE_RATE / 1000)
         audioTrack!!.setBufferSizeInFrames(numOfMinBuf * minBufferSizeInFrames)
@@ -90,26 +145,17 @@ class MainActivity : AppCompatActivity() {
                 "Encoding $ENCODING, " +
                 "BufferSizeInFrames ${audioTrack!!.bufferSizeInFrames}")
 
-        // specify the device address with setPreferredDevice
-        /*
-        val audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
-        val devices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
-        for (device in devices) {
-            Log.i(LOG_TAG,"device address: ${device.address}")
-            if (device.address == "bus0_media_out"){
-                audioTrack!!.setPreferredDevice(device)
-                break
-            }
-        }
-        */
+//        val devices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+//        for (device in devices) {
+//            Log.i(LOG_TAG,"device address: ${device.address}")
+//            if (device.address == "bus0_media_out"){
+//                audioTrack!!.setPreferredDevice(device)
+//                break
+//            }
+//        }
     }
 
-    private fun startAudioPlayback() {
-        Log.i(LOG_TAG,"start AudioPlayback, isStart: $isStart")
-        if (isStart){
-            Log.i(LOG_TAG,"in playing status, needn't start again")
-            return
-        }
+    private fun startPlayback() {
         class AudioTrackThread: Thread() {
             override fun run() {
                 super.run()
@@ -125,16 +171,16 @@ class MainActivity : AppCompatActivity() {
                         sleep(5)
                     }
                     while (audioTrack != null) {
-                        if (isStart) {
-                            val len = dis.read(bytes)
-                            if (len > 0) {
-                                audioTrack!!.write(bytes, 0, len)
-                            } else if (len == -1) {
-                                isStart = false
-                            }
-                        } else {
+                        if (!isStart) {
                             stopPlayback()
+                            continue
                         }
+                        val len = dis.read(bytes)
+                        if (len == -1) {
+                            isStart = false
+                            continue
+                        }
+                        audioTrack!!.write(bytes, 0, len)
                     }
                 } catch (e: Exception) {
                     Log.e(LOG_TAG, "Exception: ")
@@ -148,21 +194,18 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-        initAudioPlayback()
-        isStart = true
         AudioTrackThread().start()
-    }
-
-    private fun stopAudioPlayback() {
-        Log.i(LOG_TAG,"stop AudioPlayback, isStart: $isStart")
-        if (isStart) {
-            isStart = false
-        }
     }
 
     private fun stopPlayback() {
         audioTrack?.stop()
         audioTrack?.release()
         audioTrack = null
+        val result = focusRequest?.let { audioManager?.abandonAudioFocusRequest(it) }
+        if (result != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+            Log.i(LOG_TAG, "audioManager abandonAudioFocusRequest failed")
+            return
+        }
+        Log.i(LOG_TAG, "audioManager abandonAudioFocusRequest success")
     }
 }
