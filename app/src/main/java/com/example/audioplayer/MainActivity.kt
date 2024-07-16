@@ -11,8 +11,11 @@ import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
 import java.io.BufferedInputStream
 import java.io.DataInputStream
+import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,19 +35,19 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val LOG_TAG = "AudioPlayer"
-        private const val RAW_AUDIO_FILE = "/data/48k_2ch_16bit.raw"
+        private const val RAW_AUDIO_FILE = "/data/48k_2ch_16bit.wav"
         private const val USAGE = AudioAttributes.USAGE_MEDIA
         private const val CONTENT = AudioAttributes.CONTENT_TYPE_MUSIC
         private const val TRANSFER_MODE = AudioTrack.MODE_STREAM
         private const val PERF_MODE = AudioTrack.PERFORMANCE_MODE_NONE
-        private const val SAMPLE_RATE = 48000
-        private const val CHANNEL_MASK = AudioFormat.CHANNEL_IN_STEREO
-        private const val ENCODING = AudioFormat.ENCODING_PCM_16BIT
 
         private var isStart = false
+        // read from wav header if wav file
+        private var sampleRate = 48000
+        private var channelCount = 1
+        private var bytesPerSample = 2
+
         private var numOfMinBuf = 2
-        private var bytesPerSample = 0
-        private var channelsPerFrame = 0
         private var minBufferSizeInFrames = 0
         private var audioTrack: AudioTrack? = null
         private var audioManager: AudioManager? = null
@@ -58,7 +61,10 @@ class MainActivity : AppCompatActivity() {
         }
         Log.i(LOG_TAG,"start AudioPlayback.")
         isStart = true
-        initPlayback()
+        if (!initPlayback()) {
+            isStart = false
+            return
+        }
         startPlayback()
     }
 
@@ -71,7 +77,35 @@ class MainActivity : AppCompatActivity() {
         isStart = false
     }
 
-    private fun initPlayback() {
+    private fun initPlayback(): Boolean {
+        // read params from wav header
+        val file = File(RAW_AUDIO_FILE)
+        if(!file.exists()) {
+            Log.e(LOG_TAG, "audio file not exist, path: ${file.path}")
+            return false
+        }
+
+        val wavHeader = readWavHeader(file)
+        // println(wavHeader)
+        sampleRate = wavHeader.sampleRate
+        channelCount = wavHeader.numChannels.toInt()
+        bytesPerSample = wavHeader.bitsPerSample.toInt()/8
+        val channelMask = when (channelCount) {
+            1 -> AudioFormat.CHANNEL_OUT_MONO
+            2 -> AudioFormat.CHANNEL_OUT_STEREO
+            4 -> AudioFormat.CHANNEL_OUT_QUAD
+            else -> AudioFormat.CHANNEL_OUT_MONO
+        }
+        val format = when (bytesPerSample) {
+            1 -> AudioFormat.ENCODING_PCM_8BIT
+            2 -> AudioFormat.ENCODING_PCM_16BIT
+            3 -> AudioFormat.ENCODING_PCM_24BIT_PACKED
+            4 -> AudioFormat.ENCODING_PCM_32BIT
+            else -> AudioFormat.ENCODING_PCM_16BIT
+        }
+        Log.i(LOG_TAG, "wav header params: sampleRate: $sampleRate, channelCount: $channelCount," +
+                " channelMask: $channelMask, bytesPerSample: $bytesPerSample, format: $format")
+
         audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
         val audioAttributes = AudioAttributes.Builder()
             .setUsage(USAGE)
@@ -102,47 +136,36 @@ class MainActivity : AppCompatActivity() {
         val result = audioManager!!.requestAudioFocus(focusRequest!!)
         if (result != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
             Log.e(LOG_TAG, "audioManager requestAudioFocus failed")
-            isStart = false
-            return
+            return false
         }
         Log.i(LOG_TAG, "audioManager requestAudioFocus success")
 
-        val minBufSizeInBytes = AudioTrack.getMinBufferSize(
-            SAMPLE_RATE,
-            CHANNEL_MASK,
-            ENCODING)
-        Log.i(LOG_TAG, "audioTrack getMinBufferSize: $minBufSizeInBytes")
+        // after audio focus, init audio track
+        val minBufSizeInBytes = AudioTrack.getMinBufferSize(sampleRate, channelMask, format)
+        Log.i(LOG_TAG, "audioTrack getMinBufferSize: $minBufSizeInBytes Bytes")
 
         audioTrack = AudioTrack.Builder()
             .setAudioAttributes(audioAttributes)
             .setAudioFormat(
                 AudioFormat.Builder()
-                    .setSampleRate(SAMPLE_RATE)
-                    .setChannelMask(CHANNEL_MASK)
-                    .setEncoding(ENCODING)
+                    .setSampleRate(sampleRate)
+                    .setChannelMask(channelMask)
+                    .setEncoding(format)
                     .build())
             .setPerformanceMode(PERF_MODE)
             .setTransferMode(TRANSFER_MODE)
             .setBufferSizeInBytes(minBufSizeInBytes * numOfMinBuf)
             .build()
 
-        channelsPerFrame = audioTrack!!.channelCount
-        bytesPerSample = when (audioTrack!!.audioFormat) {
-            AudioFormat.ENCODING_PCM_8BIT -> 1
-            AudioFormat.ENCODING_PCM_16BIT, AudioFormat.ENCODING_IEC61937, AudioFormat.ENCODING_DEFAULT -> 2
-            AudioFormat.ENCODING_PCM_24BIT_PACKED -> 3
-            AudioFormat.ENCODING_PCM_FLOAT, AudioFormat.ENCODING_PCM_32BIT -> 4
-            else -> 2
-        }
-        minBufferSizeInFrames = minBufSizeInBytes / channelsPerFrame / bytesPerSample
-        minBufferSizeInFrames -= minBufferSizeInFrames % (SAMPLE_RATE / 1000)
+        minBufferSizeInFrames = minBufSizeInBytes / channelCount / (bytesPerSample)
+        minBufferSizeInFrames -= minBufferSizeInFrames % (sampleRate / 1000)
         audioTrack!!.setBufferSizeInFrames(numOfMinBuf * minBufferSizeInFrames)
         Log.i(LOG_TAG, "set audioTrack params: " +
                 "Usage ${USAGE}， " +
                 "ContentType ${CONTENT}， " +
-                "SampleRate $SAMPLE_RATE， " +
-                "ChannelMask ${CHANNEL_MASK}， " +
-                "Encoding $ENCODING, " +
+                "SampleRate $sampleRate， " +
+                "ChannelMask ${channelMask}， " +
+                "format $format, " +
                 "BufferSizeInFrames ${audioTrack!!.bufferSizeInFrames}")
 
 //        val devices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
@@ -153,6 +176,7 @@ class MainActivity : AppCompatActivity() {
 //                break
 //            }
 //        }
+        return true
     }
 
     private fun startPlayback() {
@@ -164,7 +188,8 @@ class MainActivity : AppCompatActivity() {
                 try {
                     fileInputStream = FileInputStream(RAW_AUDIO_FILE)
                     val dis = DataInputStream(BufferedInputStream(fileInputStream))
-                    val bytes = ByteArray(minBufferSizeInFrames * channelsPerFrame * bytesPerSample)
+                    dis.skipBytes(44)
+                    val bytes = ByteArray(minBufferSizeInFrames * channelCount * bytesPerSample)
 
                     if (audioTrack!!.state != AudioTrack.PLAYSTATE_PLAYING) {
                         audioTrack!!.play()
@@ -207,5 +232,53 @@ class MainActivity : AppCompatActivity() {
             return
         }
         Log.i(LOG_TAG, "audioManager abandonAudioFocusRequest success")
+    }
+
+
+/*************** wav header function **********************************/
+    data class WavHeader(
+        val chunkId: String,
+        val chunkSize: Int,
+        val format: String,
+        val subChunk1Id: String,
+        val subChunk1Size: Int,
+        val audioFormat: Short,
+        val numChannels: Short,
+        val sampleRate: Int,
+        val byteRate: Int,
+        val blockAlign: Short,
+        val bitsPerSample: Short,
+        val subChunk2Id: String,
+        val subChunk2Size: Int
+    )
+
+    private fun readWavHeader(file: File): WavHeader {
+        val bytes = file.readBytes()
+        val buffer = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
+
+        val chunkId = buffer.getString(4)
+        val chunkSize = buffer.int
+        val format = buffer.getString(4)
+        val subChunk1Id = buffer.getString(4)
+        val subChunk1Size = buffer.int
+        val audioFormat = buffer.short
+        val numChannels = buffer.short
+        val sampleRate = buffer.int
+        val byteRate = buffer.int
+        val blockAlign = buffer.short
+        val bitsPerSample = buffer.short
+        val subChunk2Id = buffer.getString(4)
+        val subChunk2Size = buffer.int
+
+        return WavHeader(
+            chunkId, chunkSize, format, subChunk1Id, subChunk1Size, audioFormat,
+            numChannels, sampleRate, byteRate, blockAlign, bitsPerSample, subChunk2Id, subChunk2Size
+        )
+    }
+
+    private fun ByteBuffer.getString(length: Int): String {
+        val bytes = ByteArray(length)
+        this.get(bytes)
+        return String(bytes)
     }
 }
