@@ -9,11 +9,9 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
-import java.io.BufferedInputStream
-import java.io.DataInputStream
 import java.io.File
 import java.io.FileInputStream
-import java.io.IOException
+import java.io.FileNotFoundException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -32,26 +30,25 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-
     companion object {
         private const val LOG_TAG = "AudioPlayer"
-        private const val RAW_AUDIO_FILE = "/data/48k_2ch_16bit.wav"
+        private const val AUDIO_FILE = "/data/48k_2ch_16bit.wav"
         private const val USAGE = AudioAttributes.USAGE_MEDIA
         private const val CONTENT = AudioAttributes.CONTENT_TYPE_MUSIC
         private const val TRANSFER_MODE = AudioTrack.MODE_STREAM
         private const val PERF_MODE = AudioTrack.PERFORMANCE_MODE_NONE
-
-        private var isStart = false
         // read from wav header if wav file
         private var sampleRate = 48000
         private var channelCount = 1
         private var bytesPerSample = 2
 
+        private var isStart = false
         private var numOfMinBuf = 2
         private var minBufferSizeInFrames = 0
         private var audioTrack: AudioTrack? = null
         private var audioManager: AudioManager? = null
         private var focusRequest: AudioFocusRequest? = null
+        private var fileInputStream: FileInputStream? = null
     }
 
     private fun startAudioPlayback() {
@@ -79,13 +76,19 @@ class MainActivity : AppCompatActivity() {
 
     private fun initPlayback(): Boolean {
         // read params from wav header
-        val file = File(RAW_AUDIO_FILE)
-        if(!file.exists()) {
-            Log.e(LOG_TAG, "audio file not exist, path: ${file.path}")
+        val inPutFile = File(AUDIO_FILE)
+        try {
+            fileInputStream = FileInputStream(inPutFile)
+        } catch (e: SecurityException) {
+            Log.e(LOG_TAG, "no permission to access the audio file")
+            return false
+        } catch (e: FileNotFoundException) {
+            Log.e(LOG_TAG, "audio file can't be opened, check if it exist")
             return false
         }
+        Log.i(LOG_TAG, "audio file: $inPutFile")
 
-        val wavHeader = readWavHeader(file)
+        val wavHeader = readWavHeader(fileInputStream)
         // println(wavHeader)
         sampleRate = wavHeader.sampleRate
         channelCount = wavHeader.numChannels.toInt()
@@ -94,6 +97,8 @@ class MainActivity : AppCompatActivity() {
             1 -> AudioFormat.CHANNEL_OUT_MONO
             2 -> AudioFormat.CHANNEL_OUT_STEREO
             4 -> AudioFormat.CHANNEL_OUT_QUAD
+            8 -> AudioFormat.CHANNEL_OUT_7POINT1_SURROUND
+            // 16 -> AudioFormat.CHANNEL_OUT_9POINT1POINT6
             else -> AudioFormat.CHANNEL_OUT_MONO
         }
         val format = when (bytesPerSample) {
@@ -184,37 +189,23 @@ class MainActivity : AppCompatActivity() {
             override fun run() {
                 super.run()
 
-                var fileInputStream: FileInputStream? = null
-                try {
-                    fileInputStream = FileInputStream(RAW_AUDIO_FILE)
-                    val dis = DataInputStream(BufferedInputStream(fileInputStream))
-                    dis.skipBytes(44)
-                    val bytes = ByteArray(minBufferSizeInFrames * channelCount * bytesPerSample)
-
-                    if (audioTrack!!.state != AudioTrack.PLAYSTATE_PLAYING) {
-                        audioTrack!!.play()
-                        sleep(5)
+                val bytes = ByteArray(minBufferSizeInFrames * channelCount * bytesPerSample)
+                if (audioTrack!!.state != AudioTrack.PLAYSTATE_PLAYING) {
+                    audioTrack!!.play()
+                    sleep(5)
+                }
+                while (audioTrack != null) {
+                    if (!isStart) {
+                        stopPlayback()
+                        continue
                     }
-                    while (audioTrack != null) {
-                        if (!isStart) {
-                            stopPlayback()
-                            continue
-                        }
-                        val len = dis.read(bytes)
-                        if (len == -1) {
-                            isStart = false
-                            continue
-                        }
+                    val len = fileInputStream?.read(bytes)
+                    if (len == -1) {
+                        isStart = false
+                        continue
+                    }
+                    if (len != null) {
                         audioTrack!!.write(bytes, 0, len)
-                    }
-                } catch (e: Exception) {
-                    Log.e(LOG_TAG, "Exception: ")
-                    e.printStackTrace()
-                } finally {
-                    try {
-                        fileInputStream?.close()
-                    } catch (e: IOException) {
-                        e.printStackTrace()
                     }
                 }
             }
@@ -252,9 +243,10 @@ class MainActivity : AppCompatActivity() {
         val subChunk2Size: Int
     )
 
-    private fun readWavHeader(file: File): WavHeader {
-        val bytes = file.readBytes()
-        val buffer = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
+    private fun readWavHeader(inPutStream: FileInputStream?): WavHeader {
+        val bufferArr = ByteArray(64)
+        inPutStream?.read(bufferArr,0,44)
+        val buffer = ByteBuffer.wrap(bufferArr).order(ByteOrder.LITTLE_ENDIAN)
 
         val chunkId = buffer.getString(4)
         val chunkSize = buffer.int
