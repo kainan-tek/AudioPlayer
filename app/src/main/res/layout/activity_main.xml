@@ -8,32 +8,34 @@
 
     <Button
         android:id="@+id/button1"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="130dp"
+        android:layout_height="80dp"
         android:backgroundTint="#4CAF50"
         android:clickable="true"
         android:text="@string/button1"
+        android:textSize="24sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.486"
+        app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.409"
+        app:layout_constraintVertical_bias="0.4"
         tools:text="start" />
 
     <Button
         android:id="@+id/button2"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="130dp"
+        android:layout_height="80dp"
         android:backgroundTint="#F44336"
         android:clickable="true"
         android:text="@string/button2"
+        android:textSize="24sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.486"
+        app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.524"
+        app:layout_constraintVertical_bias="0.6"
         tools:text="stop" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
