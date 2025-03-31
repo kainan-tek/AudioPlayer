@@ -79,10 +79,10 @@ class MainActivity : AppCompatActivity() {
         val inPutFile = File(AUDIO_FILE)
         try {
             fileInputStream = FileInputStream(inPutFile)
-        } catch (e: SecurityException) {
+        } catch (_: SecurityException) {
             Log.e(LOG_TAG, "no permission to access the audio file")
             return false
-        } catch (e: FileNotFoundException) {
+        } catch (_: FileNotFoundException) {
             Log.e(LOG_TAG, "audio file can't be opened, check if it exist")
             return false
         }
@@ -164,7 +164,7 @@ class MainActivity : AppCompatActivity() {
 
         minBufferSizeInFrames = minBufSizeInBytes / channelCount / (bytesPerSample)
         minBufferSizeInFrames -= minBufferSizeInFrames % (sampleRate / 1000)
-        audioTrack!!.setBufferSizeInFrames(numOfMinBuf * minBufferSizeInFrames)
+        audioTrack!!.bufferSizeInFrames = numOfMinBuf * minBufferSizeInFrames
         Log.i(LOG_TAG, "set audioTrack params: " +
                 "Usage ${USAGE}， " +
                 "ContentType ${CONTENT}， " +
