@@ -32,7 +32,7 @@ android {
         jvmTarget = "17"
     }
     compileSdk = 34
-    buildToolsVersion = "35.0.0"
+    buildToolsVersion = "35.0.1"
     ndkVersion = "27.0.12077973"
 }
 
