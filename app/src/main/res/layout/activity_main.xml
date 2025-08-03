@@ -8,6 +8,7 @@
 
     <Button
         android:id="@+id/button1"
+        style="@style/Widget.Material3.Button"
         android:layout_width="130dp"
         android:layout_height="80dp"
         android:backgroundTint="#4CAF50"
@@ -19,11 +20,12 @@
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.4"
+        app:layout_constraintVertical_bias="0.35"
         tools:text="start" />
 
     <Button
         android:id="@+id/button2"
+        style="@style/Widget.Material3.Button"
         android:layout_width="130dp"
         android:layout_height="80dp"
         android:backgroundTint="#F44336"
@@ -35,7 +37,7 @@
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.6"
+        app:layout_constraintVertical_bias="0.65"
         tools:text="stop" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
