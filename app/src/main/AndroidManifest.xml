@@ -2,20 +2,26 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- TODO: Add permissions for audio -->
+    <!-- Audio permissions for different Android versions -->
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO"
-        android:minSdkVersion = "33"/>
+        android:minSdkVersion="33" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
-<!--    <uses-permission android:name="android.permission.CAPTURE_AUDIO_OUTPUT"-->
-<!--        tools:ignore="ProtectedPermissions" />-->
+    
+    <!-- Audio settings for audio focus -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    
+    <!-- Basic permissions -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    
+    <!-- Optional: Only if you need to save audio files -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="32"
         tools:ignore="ScopedStorage" />
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
-        tools:ignore="ScopedStorage" />
+    
+    <!-- Note: MANAGE_EXTERNAL_STORAGE is generally not needed for audio players -->
+    <!-- Only use if you have specific file management requirements -->
 
     <application
         android:allowBackup="true"
