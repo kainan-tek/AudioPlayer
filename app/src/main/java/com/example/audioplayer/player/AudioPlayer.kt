@@ -245,7 +245,7 @@ class AudioPlayer(private val context: Context) {
         Log.d(LOG_TAG, "Starting playback in coroutine")
         playbackJob = scope.launch {
             val buffer = ByteArray(minBufSize)
-            var totalBytesRead = 0L
+            var totalBytesWritten = 0L
             val waveFile = waveFile ?: run {
                 Log.w(LOG_TAG, "Wave file is null, aborting playback")
                 return@launch
@@ -272,12 +272,15 @@ class AudioPlayer(private val context: Context) {
                         audioTrack?.write(buffer, 0, bytesRead)
                     }
                     
-                    totalBytesRead += bytesRead
+                    totalBytesWritten += bytesRead
+                    if ((totalBytesWritten % (minBufSize * 100)).toInt() == 0) {
+                        Log.d(LOG_TAG, "Playing in progress, total written: ${totalBytesWritten}bytes, ${totalBytesWritten/1024/1024}MB")
+                    }
                 }
                 
                 // 播放完成
                 if (isPlaying) {
-                    Log.i(LOG_TAG, "Playback completed normally, total read: ${totalBytesRead}bytes, ${totalBytesRead/1024/1024}MB")
+                    Log.i(LOG_TAG, "Playback completed normally, total written: ${totalBytesWritten}bytes, ${totalBytesWritten/1024/1024}MB")
                     stop()
                 }
             } catch (e: Exception) {
