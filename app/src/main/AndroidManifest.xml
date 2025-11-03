@@ -2,26 +2,39 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Audio permissions for different Android versions -->
-    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO"
-        android:minSdkVersion="33" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
-        android:maxSdkVersion="32" />
-    
-    <!-- Audio settings for audio focus -->
-    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
-    
-    <!-- Basic permissions -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.INTERNET" />
-    
-    <!-- Optional: Only if you need to save audio files -->
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        android:maxSdkVersion="32"
+    <!-- Android 13 (API 33) 及以上版本，使用更精确的媒体权限，仅读取音频文件 -->
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" tools:targetApi="33" />
+    <!-- Android 12 (API 32) 及以下版本，读取外部存储权限 -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <!-- 对于Android 9 (API 28) 及以下版本，写入外部存储权限 -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28"
         tools:ignore="ScopedStorage" />
-    
-    <!-- Note: MANAGE_EXTERNAL_STORAGE is generally not needed for audio players -->
-    <!-- Only use if you have specific file management requirements -->
+
+    <!-- 音频焦点和设备控制权限：用于管理音频焦点和调整音频设置，如音量控制等 -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
+    <!-- 通知权限：Android 13 (API 33) 及以上版本，用于显示播放控制通知 -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" tools:targetApi="33" />
+
+    <!-- 唤醒锁：用于在播放音频时防止设备进入深度休眠，确保音频播放不中断 -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- 允许应用使用前台服务，适用于后台持续播放音频 -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- Android 14 (API 34) 及以上版本，需要声明前台服务类型为媒体播放 -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" tools:targetApi="34" />
+
+    <!-- 网络访问：如果应用需要从网络加载音频文件，需要声明网络权限 -->
+    <!-- <uses-permission android:name="android.permission.INTERNET" /> -->
+
+    <!-- 高级存储管理：通常不需要，仅在特殊文件管理场景下考虑 -->
+    <!-- 注意：使用此权限需要在Google Play上说明使用理由 -->
+    <!-- <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" /> -->
+
+    <!-- 可选，声明应用需要音频输出功能，设置required=true表示应用完全依赖此功能才能正常运行 -->
+    <uses-feature android:name="android.hardware.audio.output" android:required="true" />
+    <!-- 可选，声明应用需要麦克风功能，设置required=false表示应用不依赖此功能即可正常运行 -->
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
 
     <application
         android:allowBackup="true"
