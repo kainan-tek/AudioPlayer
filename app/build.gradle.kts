@@ -9,7 +9,7 @@ android {
         applicationId = "com.example.audioplayer"
         versionCode = 1
         versionName = "1.0"
-        minSdk = 32
+        minSdk = 33
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21

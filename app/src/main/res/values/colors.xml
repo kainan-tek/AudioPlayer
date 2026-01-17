@@ -2,4 +2,16 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    
+    <!-- App Theme Colors -->
+    <color name="background">#F8F9FA</color>
+    <color name="card_background">#FFFFFF</color>
+    <color name="primary_text">#1A1A1A</color>
+    <color name="secondary_text">#666666</color>
+    <color name="hint_text">#999999</color>
+    
+    <!-- Button Colors -->
+    <color name="play_button">#4CAF50</color>
+    <color name="stop_button">#FF5722</color>
+    <color name="button_disabled">#E0E0E0</color>
 </resources>

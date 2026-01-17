@@ -1,0 +1,144 @@
+{
+  "configs": [
+    {
+      "usage": "MEDIA",
+      "contentType": "MUSIC",
+      "transferMode": "STREAM",
+      "performanceMode": "POWER_SAVING",
+      "bufferMultiplier": 4,
+      "audioFilePath": "/data/48k_2ch_16bit.wav",
+      "minBufferSize": 960,
+      "description": "媒体播放 (省电模式)"
+    },
+    {
+      "usage": "VOICE_COMMUNICATION",
+      "contentType": "SPEECH",
+      "transferMode": "STREAM",
+      "performanceMode": "POWER_SAVING",
+      "bufferMultiplier": 4,
+      "audioFilePath": "/data/48k_2ch_16bit.wav",
+      "minBufferSize": 960,
+      "description": "语音通话 (省电模式)"
+    },
+    {
+      "usage": "VOICE_COMMUNICATION_SIGNALLING",
+      "contentType": "SONIFICATION",
+      "transferMode": "STREAM",
+      "performanceMode": "POWER_SAVING",
+      "bufferMultiplier": 4,
+      "audioFilePath": "/data/48k_2ch_16bit.wav",
+      "minBufferSize": 960,
+      "description": "通话信令音 (省电模式)"
+    },
+    {
+      "usage": "ALARM",
+      "contentType": "SONIFICATION",
+      "transferMode": "STREAM",
+      "performanceMode": "POWER_SAVING",
+      "bufferMultiplier": 4,
+      "audioFilePath": "/data/48k_2ch_16bit.wav",
+      "minBufferSize": 960,
+      "description": "闹钟音效 (省电模式)"
+    },
+    {
+      "usage": "NOTIFICATION",
+      "contentType": "SONIFICATION",
+      "transferMode": "STREAM",
+      "performanceMode": "POWER_SAVING",
+      "bufferMultiplier": 4,
+      "audioFilePath": "/data/48k_2ch_16bit.wav",
+      "minBufferSize": 960,
+      "description": "通知音效 (省电模式)"
+    },
+    {
+      "usage": "RINGTONE",
+      "contentType": "SONIFICATION",
+      "transferMode": "STREAM",
+      "performanceMode": "POWER_SAVING",
+      "bufferMultiplier": 4,
+      "audioFilePath": "/data/48k_2ch_16bit.wav",
+      "minBufferSize": 960,
+      "description": "铃声播放 (省电模式)"
+    },
+    {
+      "usage": "NOTIFICATION_EVENT",
+      "contentType": "SONIFICATION",
+      "transferMode": "STREAM",
+      "performanceMode": "POWER_SAVING",
+      "bufferMultiplier": 4,
+      "audioFilePath": "/data/48k_2ch_16bit.wav",
+      "minBufferSize": 960,
+      "description": "通知事件 (省电模式)"
+    },
+    {
+      "usage": "ACCESSIBILITY",
+      "contentType": "SPEECH",
+      "transferMode": "STREAM",
+      "performanceMode": "POWER_SAVING",
+      "bufferMultiplier": 4,
+      "audioFilePath": "/data/48k_2ch_16bit.wav",
+      "minBufferSize": 960,
+      "description": "辅助功能 (省电模式)"
+    },
+    {
+      "usage": "NAVIGATION_GUIDANCE",
+      "contentType": "SPEECH",
+      "transferMode": "STREAM",
+      "performanceMode": "POWER_SAVING",
+      "bufferMultiplier": 4,
+      "audioFilePath": "/data/48k_2ch_16bit.wav",
+      "minBufferSize": 960,
+      "description": "导航语音 (省电模式)"
+    },
+    {
+      "usage": "SYSTEM_SONIFICATION",
+      "contentType": "SONIFICATION",
+      "transferMode": "STREAM",
+      "performanceMode": "LOW_LATENCY",
+      "bufferMultiplier": 2,
+      "audioFilePath": "/data/48k_2ch_16bit.wav",
+      "minBufferSize": 480,
+      "description": "系统提示音 (低延迟)"
+    },
+    {
+      "usage": "GAME",
+      "contentType": "SONIFICATION",
+      "transferMode": "STREAM",
+      "performanceMode": "POWER_SAVING",
+      "bufferMultiplier": 4,
+      "audioFilePath": "/data/48k_2ch_16bit.wav",
+      "minBufferSize": 960,
+      "description": "游戏音频 (省电模式)"
+    },
+    {
+      "usage": "ASSISTANT",
+      "contentType": "SPEECH",
+      "transferMode": "STREAM",
+      "performanceMode": "POWER_SAVING",
+      "bufferMultiplier": 4,
+      "audioFilePath": "/data/48k_2ch_16bit.wav",
+      "minBufferSize": 960,
+      "description": "语音助手 (省电模式)"
+    },
+    {
+      "usage": "MEDIA",
+      "contentType": "MUSIC",
+      "transferMode": "STREAM",
+      "performanceMode": "POWER_SAVING",
+      "bufferMultiplier": 4,
+      "audioFilePath": "/data/48k_12ch_16bit.wav",
+      "minBufferSize": 960,
+      "description": "多声道音乐 (12声道 7.1.4 省电)"
+    },
+    {
+      "usage": "MEDIA",
+      "contentType": "MOVIE",
+      "transferMode": "STREAM",
+      "performanceMode": "POWER_SAVING",
+      "bufferMultiplier": 4,
+      "audioFilePath": "/data/96k_2ch_24bit.wav",
+      "minBufferSize": 960,
+      "description": "高质量电影 (96kHz 2声道 省电)"
+    }
+  ]
+}

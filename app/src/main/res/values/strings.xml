@@ -1,5 +1,37 @@
 <resources>
     <string name="app_name">AudioPlayer</string>
-    <string name="button1">START</string>
-    <string name="button2">STOP</string>
+    <string name="app_title">音频播放器</string>
+    
+    <!-- Button Labels -->
+    <string name="play">播放</string>
+    <string name="stop">停止</string>
+    <string name="audio_config">配置: 默认配置</string>
+    <string name="audio_config_format">配置: %s</string>
+    
+    <!-- Status Messages -->
+    <string name="status_ready">准备就绪</string>
+    <string name="status_playing">正在播放…</string>
+    <string name="status_stopped">播放已停止</string>
+    <string name="status_preparing">准备播放…</string>
+    <string name="status_stopping">正在停止…</string>
+    
+    <!-- File Info -->
+    <string name="file_info">配置文件: /data/audio_configs.json\n支持多种测试文件:\n• /data/48k_2ch_16bit.wav (默认)\n• /data/96k_8ch_24bit.wav (高质量)\n• /data/48k_12ch_16bit.wav (多声道)\n\n支持多通道音频 (1-12声道)\n包括7.1.4 3D音频</string>
+    
+    <!-- Error Messages -->
+    <string name="error_permission_denied">需要音频权限才能播放文件</string>
+    <string name="error_file_not_found">找不到音频文件</string>
+    <string name="error_playback_failed">播放失败</string>
+    <string name="error_unsupported_format">不支持的音频格式</string>
+    <string name="error_unsupported_channels">不支持的声道配置</string>
+    
+    <!-- Permission Messages -->
+    <string name="permission_granted">权限已授予</string>
+    <string name="permission_required">播放音频文件需要存储权限</string>
+    
+    <!-- Audio Format Info -->
+    <string name="supported_formats">支持格式:\n• 采样率: 8kHz - 192kHz\n• 声道: 1-12声道 (含7.1.4)\n• 位深度: 8/16/24/32bit\n• 3D音频: 5.1.4, 6.1.4, 7.1.4</string>
+    
+    <!-- Channel Descriptions -->
+    <string name="channel_layout_714">7.1.4声道布局:\n前置: L R C LFE\n环绕: Ls Rs Lrs Rrs\n天空: Ltf Rtf Ltb Rtb</string>
 </resources>
