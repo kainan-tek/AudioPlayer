@@ -5,7 +5,7 @@
 ## 特性
 
 - 🎵 支持WAV格式音频播放
-- 🔊 **完整多通道支持 (1-12声道)**
+- 🔊 **完整多通道支持 (1-16声道)**
 - 🌟 **7.1.4 3D音频支持**
 - 🎨 现代Material Design界面
 - 🏗️ 简洁的MVVM架构
@@ -25,39 +25,29 @@
 | 8 | 7.1声道 | 7.1 Surround | L R C LFE Ls Rs Lrs Rrs |
 | 10 | 5.1.4声道 | 5.1 + 4天空 | L R C LFE Ls Rs Ltf Rtf Ltb Rtb |
 | 12 | **7.1.4声道** | **7.1 + 4天空** | **L R C LFE Ls Rs Lrs Rrs Ltf Rtf Ltb Rtb** |
+| 1-16 | 其他配置 | 自动映射 | 根据声道数自动选择最佳配置 |
 
 ### 7.1.4声道详解
-7.1.4是最新的3D音频标准，包含12个声道：
-- **前置层**: L(左前), R(右前), C(中置), LFE(低频)
-- **环绕层**: Ls(左环绕), Rs(右环绕), Lrs(左后环绕), Rrs(右后环绕)  
-- **天空层**: Ltf(左前天空), Rtf(右前天空), Ltb(左后天空), Rtb(右后天空)
+7.1.4是最新的3D音频标准，包含12个声道：前置层(L R C LFE)、环绕层(Ls Rs Lrs Rrs)、天空层(Ltf Rtf Ltb Rtb)。
 
 ### 音频参数
 - **采样率**: 8kHz - 192kHz
-- **位深度**: 8/16/24/32 bit
+- **位深度**: 8/16/24/32 bit  
 - **格式**: WAV (PCM)
-- **最大声道**: 12声道 (7.1.4)
-- **自动参数验证和设备兼容性检查**
-
-### 性能优化
-- 根据声道数动态调整缓冲区大小
-- 12声道音频使用8KB优化缓冲区
-- 实时播放进度和性能监控
+- **最大声道**: 16声道
+- **配置系统**: 支持多种音频用途和性能模式
 
 ## 快速开始
 
 ### 环境要求
 - Android Studio
-- Android SDK API 32+
-- 测试设备或模拟器 (Android 12L+)
+- Android SDK API 33+
+- 测试设备或模拟器 (Android 13+)
 
 ### 安装步骤
 
 1. **准备测试文件**
 ```bash
-adb root
-adb remount  
-adb shell setenforce 0
 adb push 48k_2ch_16bit.wav /data/
 ```
 
@@ -67,9 +57,8 @@ adb push 48k_2ch_16bit.wav /data/
 adb install app/build/outputs/apk/debug/app-debug.apk
 ```
 
-3. **运行应用**
-- 启动应用
-- 授予存储权限
+3. **运行测试**
+- 启动应用并授予存储权限
 - 点击"播放"按钮开始测试
 
 ## 项目结构
@@ -77,6 +66,8 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 ```
 app/src/main/java/com/example/audioplayer/
 ├── MainActivity.kt              # 主界面
+├── config/
+│   └── AudioConfig.kt           # 音频配置管理
 ├── model/
 │   └── WaveFile.kt              # WAV文件处理
 ├── player/
@@ -89,23 +80,33 @@ app/src/main/java/com/example/audioplayer/
 
 采用简洁的MVVM架构模式：
 
-- **UI层**: 负责用户交互和界面展示
-- **ViewModel层**: 管理UI状态和数据绑定  
-- **业务逻辑层**: 处理音频播放核心功能
-- **数据层**: 处理WAV文件读取和解析
+- **UI层 (MainActivity)**: 负责用户交互和界面展示，使用Material Design组件
+- **ViewModel层 (PlayerViewModel)**: 管理UI状态和数据绑定，使用LiveData  
+- **业务逻辑层 (AudioPlayer)**: 处理音频播放核心功能，支持多种配置
+- **数据层 (WaveFile + AudioConfig)**: 处理WAV文件读取和音频配置管理
 
-详细架构说明请参考 [ARCHITECTURE.md](ARCHITECTURE.md)
+### 主要特点
+- **简洁性**: 每个类都有明确的单一职责
+- **可读性**: 清晰的命名和代码结构  
+- **易维护**: 模块化设计，便于扩展
+- **配置化**: 支持外部JSON配置文件
+
+详细配置说明请参考 [CONFIGURATION.md](CONFIGURATION.md)
 
 ## 主要改进
 
+### 配置系统
+- 支持外部JSON配置文件
+- 多种音频用途和性能模式
+- 12种预设配置场景
+- 运行时配置重载
+
 ### UI设计
-- 采用Material Design 3组件
+- Material Design 3组件
 - 卡片式状态显示
-- 清晰的按钮状态反馈
 - 中文本地化界面
 
 ### 代码质量
-- 简化复杂逻辑
 - 统一错误处理
 - 清晰的代码注释
 - 易于理解的命名
@@ -114,7 +115,6 @@ app/src/main/java/com/example/audioplayer/
 - 友好的错误提示
 - 实时状态更新
 - 自动权限管理
-- 响应式交互
 
 ## 技术栈
 
@@ -123,11 +123,11 @@ app/src/main/java/com/example/audioplayer/
 - **UI**: Material Design 3
 - **音频**: AudioTrack + AudioManager
 - **并发**: Kotlin Coroutines
-- **最低API**: 32 (Android 12L+)
+- **最低API**: 33 (Android 13+)
 
 ## 系统要求
 
-- Android 12L+ (API 32+)
+- Android 13+ (API 33+)
 - 支持多声道音频输出的设备
 - 存储权限 (READ_MEDIA_AUDIO)
 

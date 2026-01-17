@@ -379,7 +379,7 @@ class AudioPlayer(private val context: Context) {
 
     /**
      * 获取声道掩码，支持多通道音频包括7.1.4 (12通道)
-     * 适用于API 32+
+     * 适用于API 33+
      */
     private fun getChannelMask(channelCount: Int): Int {
         return when (channelCount) {
