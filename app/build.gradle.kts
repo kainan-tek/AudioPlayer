@@ -1,6 +1,5 @@
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
 }
 
 android {
@@ -10,27 +9,16 @@ android {
         applicationId = "com.example.audioplayer"
         versionCode = 1
         versionName = "1.0"
-
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         minSdk = 32
-    }
-
-    buildTypes {
-        release {
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
     }
-    compileSdkVersion("android-36.1")
+    compileSdk = 36
     buildToolsVersion = "36.1.0"
     ndkVersion = "29.0.14206865"
+    compileSdkMinor = 1
 }
 
 dependencies {
@@ -40,8 +28,8 @@ dependencies {
     implementation("androidx.constraintlayout:constraintlayout:2.2.1")
     
     // ViewModel and LiveData
-    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.9.4")
-    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.9.4")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.10.0")
+    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.10.0")
     
     // Kotlin Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
