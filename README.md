@@ -16,16 +16,16 @@
 ## 音频格式支持
 
 ### 声道配置
-| 声道数 | 配置名称 | 说明 | 声道布局 |
-|--------|----------|------|----------|
-| 1 | 单声道 | Mono | M |
-| 2 | 立体声 | Stereo | L R |
-| 4 | 四声道 | Quad | L R Ls Rs |
-| 6 | 5.1声道 | 5.1 Surround | L R C LFE Ls Rs |
-| 8 | 7.1声道 | 7.1 Surround | L R C LFE Ls Rs Lrs Rrs |
-| 10 | 5.1.4声道 | 5.1 + 4天空 | L R C LFE Ls Rs Ltf Rtf Ltb Rtb |
-| 12 | **7.1.4声道** | **7.1 + 4天空** | **L R C LFE Ls Rs Lrs Rrs Ltf Rtf Ltb Rtb** |
-| 1-16 | 其他配置 | 自动映射 | 根据声道数自动选择最佳配置 |
+| 声道数  | 配置名称        | 说明            | 声道布局                                        |
+|------|-------------|---------------|---------------------------------------------|
+| 1    | 单声道         | Mono          | M                                           |
+| 2    | 立体声         | Stereo        | L R                                         |
+| 4    | 四声道         | Quad          | L R Ls Rs                                   |
+| 6    | 5.1声道       | 5.1 Surround  | L R C LFE Ls Rs                             |
+| 8    | 7.1声道       | 7.1 Surround  | L R C LFE Ls Rs Lrs Rrs                     |
+| 10   | 5.1.4声道     | 5.1 + 4天空     | L R C LFE Ls Rs Ltf Rtf Ltb Rtb             |
+| 12   | **7.1.4声道** | **7.1 + 4天空** | **L R C LFE Ls Rs Lrs Rrs Ltf Rtf Ltb Rtb** |
+| 1-16 | 其他配置        | 自动映射          | 根据声道数自动选择最佳配置                               |
 
 ### 7.1.4声道详解
 7.1.4是最新的3D音频标准，包含12个声道：前置层(L R C LFE)、环绕层(Ls Rs Lrs Rrs)、天空层(Ltf Rtf Ltb Rtb)。
@@ -47,19 +47,23 @@
 ### 安装步骤
 
 1. **准备测试文件**
-```bash
-adb push 48k_2ch_16bit.wav /data/
-```
+   ```bash
+   adb push 48k_2ch_16bit.wav /data/
+   # 可选：推送自定义配置文件
+   adb push audio_configs.json /data/
+   ```
 
 2. **编译安装**
-```bash
-./gradlew assembleDebug
-adb install app/build/outputs/apk/debug/app-debug.apk
-```
+   ```bash
+   ./gradlew assembleDebug
+   adb install app/build/outputs/apk/debug/app-debug.apk
+   ```
 
 3. **运行测试**
-- 启动应用并授予存储权限
-- 点击"播放"按钮开始测试
+   - 启动应用并授予存储权限
+   - 应用会自动检测 `/data/audio_configs.json` 是否存在
+   - 如果存在外部配置文件，使用外部配置；否则使用内置配置
+   - 点击"配置"按钮选择不同的音频配置进行测试
 
 ## 项目结构
 

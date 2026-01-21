@@ -4,11 +4,9 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioTrack
 import android.util.Log
-import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.FileInputStream
-import java.io.FileOutputStream
 
 /**
  * 音频配置数据类
@@ -40,57 +38,51 @@ data class AudioConfig(
         }.trim()
     }
     
-    private fun getUsageString(usage: Int): String {
-        return when (usage) {
-            AudioAttributes.USAGE_UNKNOWN -> "UNKNOWN"
-            AudioAttributes.USAGE_MEDIA -> "MEDIA"
-            AudioAttributes.USAGE_VOICE_COMMUNICATION -> "VOICE_COMMUNICATION"
-            AudioAttributes.USAGE_VOICE_COMMUNICATION_SIGNALLING -> "VOICE_COMMUNICATION_SIGNALLING"
-            AudioAttributes.USAGE_ALARM -> "ALARM"
-            AudioAttributes.USAGE_NOTIFICATION -> "NOTIFICATION"
-            AudioAttributes.USAGE_NOTIFICATION_RINGTONE -> "RINGTONE"
-            AudioAttributes.USAGE_NOTIFICATION_EVENT -> "NOTIFICATION_EVENT"
-            AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY -> "ACCESSIBILITY"
-            AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE -> "NAVIGATION_GUIDANCE"
-            AudioAttributes.USAGE_ASSISTANCE_SONIFICATION -> "SYSTEM_SONIFICATION"
-            AudioAttributes.USAGE_GAME -> "GAME"
-            AudioAttributes.USAGE_ASSISTANT -> "ASSISTANT"
-            else -> "UNKNOWN($usage)"
-        }
-    }
-    
-    private fun getContentTypeString(contentType: Int): String {
-        return when (contentType) {
-            AudioAttributes.CONTENT_TYPE_UNKNOWN -> "UNKNOWN"
-            AudioAttributes.CONTENT_TYPE_MUSIC -> "MUSIC"
-            AudioAttributes.CONTENT_TYPE_MOVIE -> "MOVIE"
-            AudioAttributes.CONTENT_TYPE_SPEECH -> "SPEECH"
-            AudioAttributes.CONTENT_TYPE_SONIFICATION -> "SONIFICATION"
-            else -> "UNKNOWN($contentType)"
-        }
-    }
-    
-    private fun getTransferModeString(transferMode: Int): String {
-        return when (transferMode) {
-            AudioTrack.MODE_STREAM -> "STREAM"
-            AudioTrack.MODE_STATIC -> "STATIC"
-            else -> "UNKNOWN($transferMode)"
-        }
-    }
-    
-    private fun getPerformanceModeString(performanceMode: Int): String {
-        return when (performanceMode) {
-            AudioTrack.PERFORMANCE_MODE_LOW_LATENCY -> "LOW_LATENCY"
-            AudioTrack.PERFORMANCE_MODE_POWER_SAVING -> "POWER_SAVING"
-            AudioTrack.PERFORMANCE_MODE_NONE -> "NONE"
-            else -> "UNKNOWN($performanceMode)"
-        }
-    }
+    private fun getUsageString(usage: Int): String = USAGE_MAP[usage] ?: "UNKNOWN($usage)"
+    private fun getContentTypeString(contentType: Int): String = CONTENT_TYPE_MAP[contentType] ?: "UNKNOWN($contentType)"
+    private fun getTransferModeString(transferMode: Int): String = TRANSFER_MODE_MAP[transferMode] ?: "UNKNOWN($transferMode)"
+    private fun getPerformanceModeString(performanceMode: Int): String = PERFORMANCE_MODE_MAP[performanceMode] ?: "UNKNOWN($performanceMode)"
 
     companion object {
         private const val TAG = "AudioConfig"
         private const val CONFIG_FILE_PATH = "/data/audio_configs.json"
         private const val ASSETS_CONFIG_FILE = "audio_configs.json"
+
+        // 常量映射表，避免重复的when表达式
+        private val USAGE_MAP = mapOf(
+            AudioAttributes.USAGE_UNKNOWN to "UNKNOWN",
+            AudioAttributes.USAGE_MEDIA to "MEDIA",
+            AudioAttributes.USAGE_VOICE_COMMUNICATION to "VOICE_COMMUNICATION",
+            AudioAttributes.USAGE_VOICE_COMMUNICATION_SIGNALLING to "VOICE_COMMUNICATION_SIGNALLING",
+            AudioAttributes.USAGE_ALARM to "ALARM",
+            AudioAttributes.USAGE_NOTIFICATION to "NOTIFICATION",
+            AudioAttributes.USAGE_NOTIFICATION_RINGTONE to "RINGTONE",
+            AudioAttributes.USAGE_NOTIFICATION_EVENT to "NOTIFICATION_EVENT",
+            AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY to "ACCESSIBILITY",
+            AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE to "NAVIGATION_GUIDANCE",
+            AudioAttributes.USAGE_ASSISTANCE_SONIFICATION to "SYSTEM_SONIFICATION",
+            AudioAttributes.USAGE_GAME to "GAME",
+            AudioAttributes.USAGE_ASSISTANT to "ASSISTANT"
+        )
+
+        private val CONTENT_TYPE_MAP = mapOf(
+            AudioAttributes.CONTENT_TYPE_UNKNOWN to "UNKNOWN",
+            AudioAttributes.CONTENT_TYPE_MUSIC to "MUSIC",
+            AudioAttributes.CONTENT_TYPE_MOVIE to "MOVIE",
+            AudioAttributes.CONTENT_TYPE_SPEECH to "SPEECH",
+            AudioAttributes.CONTENT_TYPE_SONIFICATION to "SONIFICATION"
+        )
+
+        private val TRANSFER_MODE_MAP = mapOf(
+            AudioTrack.MODE_STREAM to "STREAM",
+            AudioTrack.MODE_STATIC to "STATIC"
+        )
+
+        private val PERFORMANCE_MODE_MAP = mapOf(
+            AudioTrack.PERFORMANCE_MODE_LOW_LATENCY to "LOW_LATENCY",
+            AudioTrack.PERFORMANCE_MODE_POWER_SAVING to "POWER_SAVING",
+            AudioTrack.PERFORMANCE_MODE_NONE to "NONE"
+        )
 
         /**
          * 从外部文件或assets加载配置
@@ -103,13 +95,9 @@ data class AudioConfig(
                     Log.i(TAG, "从外部文件加载了 ${externalConfigs.size} 个配置")
                     externalConfigs
                 } else {
-                    // 如果外部文件不存在或为空，从assets加载并创建外部文件
+                    // 如果外部文件不存在或为空，从assets加载
                     Log.i(TAG, "外部配置文件不存在，从assets加载默认配置")
-                    val defaultConfigs = loadFromAssets(context)
-                    if (defaultConfigs.isNotEmpty()) {
-                        createExternalConfigFile(defaultConfigs)
-                    }
-                    defaultConfigs
+                    loadFromAssets(context)
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "加载配置失败，使用空配置列表", e)
@@ -198,135 +186,17 @@ data class AudioConfig(
             )
         }
 
-        /**
-         * 创建外部配置文件
-         */
-        private fun createExternalConfigFile(configs: List<AudioConfig>) {
-            try {
-                val jsonObject = JSONObject()
-                val configsArray = JSONArray()
+        // 解析方法 - 使用反向映射表
+        private fun parseUsage(usage: String): Int = 
+            USAGE_MAP.entries.find { it.value == usage.uppercase() }?.key ?: AudioAttributes.USAGE_MEDIA
 
-                configs.forEach { config ->
-                    val configJson = JSONObject().apply {
-                        put("usage", getUsageString(config.usage))
-                        put("contentType", getContentTypeString(config.contentType))
-                        put("transferMode", getTransferModeString(config.transferMode))
-                        put("performanceMode", getPerformanceModeString(config.performanceMode))
-                        put("bufferMultiplier", config.bufferMultiplier)
-                        put("audioFilePath", config.audioFilePath)
-                        put("minBufferSize", config.minBufferSize)
-                        put("description", config.description)
-                    }
-                    configsArray.put(configJson)
-                }
+        private fun parseContentType(contentType: String): Int = 
+            CONTENT_TYPE_MAP.entries.find { it.value == contentType.uppercase() }?.key ?: AudioAttributes.CONTENT_TYPE_MUSIC
 
-                jsonObject.put("configs", configsArray)
+        private fun parseTransferMode(transferMode: String): Int = 
+            TRANSFER_MODE_MAP.entries.find { it.value == transferMode.uppercase() }?.key ?: AudioTrack.MODE_STREAM
 
-                val file = File(CONFIG_FILE_PATH)
-                FileOutputStream(file).use {
-                    it.write(jsonObject.toString(2).toByteArray(Charsets.UTF_8))
-                }
-
-                Log.i(TAG, "外部配置文件已创建: $CONFIG_FILE_PATH")
-            } catch (e: Exception) {
-                Log.e(TAG, "创建外部配置文件失败", e)
-            }
-        }
-
-        // 解析方法
-        private fun parseUsage(usage: String): Int {
-            return when (usage.uppercase()) {
-                "UNKNOWN" -> AudioAttributes.USAGE_UNKNOWN
-                "MEDIA" -> AudioAttributes.USAGE_MEDIA
-                "VOICE_COMMUNICATION" -> AudioAttributes.USAGE_VOICE_COMMUNICATION
-                "VOICE_COMMUNICATION_SIGNALLING" -> AudioAttributes.USAGE_VOICE_COMMUNICATION_SIGNALLING
-                "ALARM" -> AudioAttributes.USAGE_ALARM
-                "NOTIFICATION" -> AudioAttributes.USAGE_NOTIFICATION
-                "RINGTONE" -> AudioAttributes.USAGE_NOTIFICATION_RINGTONE
-                "NOTIFICATION_EVENT" -> AudioAttributes.USAGE_NOTIFICATION_EVENT
-                "ACCESSIBILITY" -> AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY
-                "NAVIGATION_GUIDANCE" -> AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE
-                "SYSTEM_SONIFICATION" -> AudioAttributes.USAGE_ASSISTANCE_SONIFICATION
-                "GAME" -> AudioAttributes.USAGE_GAME
-                "ASSISTANT" -> AudioAttributes.USAGE_ASSISTANT
-                else -> AudioAttributes.USAGE_MEDIA
-            }
-        }
-
-        private fun parseContentType(contentType: String): Int {
-            return when (contentType.uppercase()) {
-                "UNKNOWN" -> AudioAttributes.CONTENT_TYPE_UNKNOWN
-                "MUSIC" -> AudioAttributes.CONTENT_TYPE_MUSIC
-                "MOVIE" -> AudioAttributes.CONTENT_TYPE_MOVIE
-                "SPEECH" -> AudioAttributes.CONTENT_TYPE_SPEECH
-                "SONIFICATION" -> AudioAttributes.CONTENT_TYPE_SONIFICATION
-                else -> AudioAttributes.CONTENT_TYPE_MUSIC
-            }
-        }
-
-        private fun parseTransferMode(transferMode: String): Int {
-            return when (transferMode.uppercase()) {
-                "STREAM" -> AudioTrack.MODE_STREAM
-                "STATIC" -> AudioTrack.MODE_STATIC
-                else -> AudioTrack.MODE_STREAM
-            }
-        }
-
-        private fun parsePerformanceMode(performanceMode: String): Int {
-            return when (performanceMode.uppercase()) {
-                "LOW_LATENCY" -> AudioTrack.PERFORMANCE_MODE_LOW_LATENCY
-                "POWER_SAVING" -> AudioTrack.PERFORMANCE_MODE_POWER_SAVING
-                "NONE" -> AudioTrack.PERFORMANCE_MODE_NONE
-                else -> AudioTrack.PERFORMANCE_MODE_POWER_SAVING
-            }
-        }
-
-        // 转换为字符串的方法
-        private fun getUsageString(usage: Int): String {
-            return when (usage) {
-                AudioAttributes.USAGE_UNKNOWN -> "UNKNOWN"
-                AudioAttributes.USAGE_MEDIA -> "MEDIA"
-                AudioAttributes.USAGE_VOICE_COMMUNICATION -> "VOICE_COMMUNICATION"
-                AudioAttributes.USAGE_VOICE_COMMUNICATION_SIGNALLING -> "VOICE_COMMUNICATION_SIGNALLING"
-                AudioAttributes.USAGE_ALARM -> "ALARM"
-                AudioAttributes.USAGE_NOTIFICATION -> "NOTIFICATION"
-                AudioAttributes.USAGE_NOTIFICATION_RINGTONE -> "RINGTONE"
-                AudioAttributes.USAGE_NOTIFICATION_EVENT -> "NOTIFICATION_EVENT"
-                AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY -> "ACCESSIBILITY"
-                AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE -> "NAVIGATION_GUIDANCE"
-                AudioAttributes.USAGE_ASSISTANCE_SONIFICATION -> "SYSTEM_SONIFICATION"
-                AudioAttributes.USAGE_GAME -> "GAME"
-                AudioAttributes.USAGE_ASSISTANT -> "ASSISTANT"
-                else -> "MEDIA"
-            }
-        }
-
-        private fun getContentTypeString(contentType: Int): String {
-            return when (contentType) {
-                AudioAttributes.CONTENT_TYPE_UNKNOWN -> "UNKNOWN"
-                AudioAttributes.CONTENT_TYPE_MUSIC -> "MUSIC"
-                AudioAttributes.CONTENT_TYPE_MOVIE -> "MOVIE"
-                AudioAttributes.CONTENT_TYPE_SPEECH -> "SPEECH"
-                AudioAttributes.CONTENT_TYPE_SONIFICATION -> "SONIFICATION"
-                else -> "MUSIC"
-            }
-        }
-
-        private fun getTransferModeString(transferMode: Int): String {
-            return when (transferMode) {
-                AudioTrack.MODE_STREAM -> "STREAM"
-                AudioTrack.MODE_STATIC -> "STATIC"
-                else -> "STREAM"
-            }
-        }
-
-        private fun getPerformanceModeString(performanceMode: Int): String {
-            return when (performanceMode) {
-                AudioTrack.PERFORMANCE_MODE_LOW_LATENCY -> "LOW_LATENCY"
-                AudioTrack.PERFORMANCE_MODE_POWER_SAVING -> "POWER_SAVING"
-                AudioTrack.PERFORMANCE_MODE_NONE -> "NONE"
-                else -> "POWER_SAVING"
-            }
-        }
+        private fun parsePerformanceMode(performanceMode: String): Int = 
+            PERFORMANCE_MODE_MAP.entries.find { it.value == performanceMode.uppercase() }?.key ?: AudioTrack.PERFORMANCE_MODE_POWER_SAVING
     }
 }

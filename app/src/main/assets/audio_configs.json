@@ -14,21 +14,21 @@
       "usage": "VOICE_COMMUNICATION",
       "contentType": "SPEECH",
       "transferMode": "STREAM",
-      "performanceMode": "POWER_SAVING",
-      "minBufferSize": 960,
-      "bufferMultiplier": 2,
+      "performanceMode": "LOW_LATENCY",
+      "minBufferSize": 480,
+      "bufferMultiplier": 1,
       "audioFilePath": "/data/48k_2ch_16bit.wav",
-      "description": "语音通话 (省电模式)"
+      "description": "语音通话 (低延迟)"
     },
     {
       "usage": "VOICE_COMMUNICATION_SIGNALLING",
       "contentType": "SONIFICATION",
       "transferMode": "STREAM",
-      "performanceMode": "POWER_SAVING",
-      "minBufferSize": 960,
-      "bufferMultiplier": 2,
+      "performanceMode": "LOW_LATENCY",
+      "minBufferSize": 480,
+      "bufferMultiplier": 1,
       "audioFilePath": "/data/48k_2ch_16bit.wav",
-      "description": "通话信令音 (省电模式)"
+      "description": "通话信令音 (低延迟)"
     },
     {
       "usage": "ALARM",
@@ -104,11 +104,11 @@
       "usage": "GAME",
       "contentType": "SONIFICATION",
       "transferMode": "STREAM",
-      "performanceMode": "POWER_SAVING",
-      "minBufferSize": 960,
+      "performanceMode": "LOW_LATENCY",
+      "minBufferSize": 480,
       "bufferMultiplier": 2,
       "audioFilePath": "/data/48k_2ch_16bit.wav",
-      "description": "游戏音频 (省电模式)"
+      "description": "游戏音频 (低延迟)"
     },
     {
       "usage": "ASSISTANT",
@@ -126,19 +126,29 @@
       "transferMode": "STREAM",
       "performanceMode": "POWER_SAVING",
       "minBufferSize": 960,
-      "bufferMultiplier": 2,
+      "bufferMultiplier": 3,
       "audioFilePath": "/data/48k_12ch_16bit.wav",
-      "description": "多声道音乐 (12声道 7.1.4 省电)"
+      "description": "多声道音乐 (12声道 7.1.4)"
     },
     {
       "usage": "MEDIA",
       "contentType": "MOVIE",
       "transferMode": "STREAM",
       "performanceMode": "POWER_SAVING",
-      "minBufferSize": 960,
-      "bufferMultiplier": 2,
+      "minBufferSize": 1920,
+      "bufferMultiplier": 4,
       "audioFilePath": "/data/96k_2ch_24bit.wav",
-      "description": "高质量电影 (96kHz 2声道 省电)"
+      "description": "高质量电影 (96kHz 24bit)"
+    },
+    {
+      "usage": "MEDIA",
+      "contentType": "MUSIC",
+      "transferMode": "STREAM",
+      "performanceMode": "LOW_LATENCY",
+      "minBufferSize": 480,
+      "bufferMultiplier": 2,
+      "audioFilePath": "/data/48k_2ch_16bit.wav",
+      "description": "媒体播放 (低延迟模式)"
     }
   ]
 }

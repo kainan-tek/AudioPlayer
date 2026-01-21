@@ -23,9 +23,10 @@ import com.google.android.material.button.MaterialButton
  * 2. adb push 48k_2ch_16bit.wav /data/
  * 3. adb push 96k_8ch_24bit.wav /data/  (可选，用于高质量音频测试)
  * 4. adb push 48k_12ch_16bit.wav /data/ (可选，用于多声道测试)
- * 5. 安装并运行应用 (首次运行会在/data/创建audio_configs.json)
- * 6. 修改 /data/audio_configs.json 文件来自定义配置
- * 7. 在应用中点击"配置"按钮，选择"重新加载配置文件"来应用更改
+ * 5. (可选) adb push audio_configs.json /data/ (自定义配置文件)
+ * 6. 安装并运行应用
+ * 7. 如果存在 /data/audio_configs.json，应用会使用外部配置；否则使用内置配置
+ * 8. 在应用中点击"配置"按钮选择不同的音频配置进行测试
  * 
  * 系统要求: Android 13 (API 33+)
  * 
@@ -160,14 +161,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun checkPermissions() {
-        if (!hasAudioPermission()) {
-            requestAudioPermission()
-        }
+        if (!hasAudioPermission()) requestAudioPermission()
     }
 
-    private fun hasAudioPermission(): Boolean {
-        return ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_AUDIO) == PackageManager.PERMISSION_GRANTED
-    }
+    private fun hasAudioPermission(): Boolean = 
+        ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_AUDIO) == PackageManager.PERMISSION_GRANTED
 
     private fun requestAudioPermission() {
         ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_MEDIA_AUDIO), PERMISSION_REQUEST_CODE)

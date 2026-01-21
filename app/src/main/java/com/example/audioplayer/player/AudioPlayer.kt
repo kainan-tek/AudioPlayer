@@ -379,21 +379,21 @@ class AudioPlayer(private val context: Context) {
 
     /**
      * 获取声道掩码，支持多通道音频包括7.1.4 (12通道)
-     * 适用于API 33+
      */
     private fun getChannelMask(channelCount: Int): Int {
-        return when (channelCount) {
-            1 -> AudioFormat.CHANNEL_OUT_MONO
-            2 -> AudioFormat.CHANNEL_OUT_STEREO
-            4 -> AudioFormat.CHANNEL_OUT_QUAD
-            6 -> AudioFormat.CHANNEL_OUT_5POINT1
-            8 -> AudioFormat.CHANNEL_OUT_7POINT1_SURROUND
-            10 -> AudioFormat.CHANNEL_OUT_5POINT1POINT4  // 5.1.4配置
-            12 -> AudioFormat.CHANNEL_OUT_7POINT1POINT4  // 7.1.4配置
-            else -> {
-                Log.w(TAG, "不支持的声道数: $channelCount，使用立体声播放")
-                AudioFormat.CHANNEL_OUT_STEREO
-            }
+        val channelMasks = mapOf(
+            1 to AudioFormat.CHANNEL_OUT_MONO,
+            2 to AudioFormat.CHANNEL_OUT_STEREO,
+            4 to AudioFormat.CHANNEL_OUT_QUAD,
+            6 to AudioFormat.CHANNEL_OUT_5POINT1,
+            8 to AudioFormat.CHANNEL_OUT_7POINT1_SURROUND,
+            10 to AudioFormat.CHANNEL_OUT_5POINT1POINT4,
+            12 to AudioFormat.CHANNEL_OUT_7POINT1POINT4
+        )
+        
+        return channelMasks[channelCount] ?: run {
+            Log.w(TAG, "不支持的声道数: $channelCount，使用立体声播放")
+            AudioFormat.CHANNEL_OUT_STEREO
         }
     }
 
@@ -401,15 +401,16 @@ class AudioPlayer(private val context: Context) {
      * 获取音频格式，支持多种位深度
      */
     private fun getAudioFormat(bitsPerSample: Int): Int {
-        return when (bitsPerSample) {
-            8 -> AudioFormat.ENCODING_PCM_8BIT
-            16 -> AudioFormat.ENCODING_PCM_16BIT
-            24 -> AudioFormat.ENCODING_PCM_24BIT_PACKED
-            32 -> AudioFormat.ENCODING_PCM_32BIT
-            else -> {
-                Log.w(TAG, "不支持的位深度: $bitsPerSample，使用16位")
-                AudioFormat.ENCODING_PCM_16BIT
-            }
+        val audioFormats = mapOf(
+            8 to AudioFormat.ENCODING_PCM_8BIT,
+            16 to AudioFormat.ENCODING_PCM_16BIT,
+            24 to AudioFormat.ENCODING_PCM_24BIT_PACKED,
+            32 to AudioFormat.ENCODING_PCM_32BIT
+        )
+        
+        return audioFormats[bitsPerSample] ?: run {
+            Log.w(TAG, "不支持的位深度: $bitsPerSample，使用16位")
+            AudioFormat.ENCODING_PCM_16BIT
         }
     }
 }
