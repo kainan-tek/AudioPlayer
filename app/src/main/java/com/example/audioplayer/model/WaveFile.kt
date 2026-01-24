@@ -6,7 +6,7 @@ import java.io.FileInputStream
 import java.io.IOException
 
 /**
- * 简洁的WAV文件读取类
+ * Concise WAV file reading class
  */
 class WaveFile(private val filePath: String) {
     
@@ -25,7 +25,7 @@ class WaveFile(private val filePath: String) {
     private var fileInputStream: FileInputStream? = null
     private var isFileOpen = false
     
-    // 音频属性
+    // Audio properties
     var sampleRate: Int = 0
         private set
     var channelCount: Int = 0
@@ -46,14 +46,14 @@ class WaveFile(private val filePath: String) {
     
     val channelDescription: String
         get() = when (channelCount) {
-            1 -> "单声道"
-            2 -> "立体声"
-            4 -> "四声道"
-            6 -> "5.1声道"
-            8 -> "7.1声道"
-            10 -> "5.1.4声道"
-            12 -> "7.1.4声道"
-            else -> "${channelCount}声道 (播放为立体声)"
+            1 -> "Mono"
+            2 -> "Stereo"
+            4 -> "Quad"
+            6 -> "5.1 Surround"
+            8 -> "7.1 Surround"
+            10 -> "5.1.4 Surround"
+            12 -> "7.1.4 Surround"
+            else -> "$channelCount channels (playback as stereo)"
         }
 
     val channelLayout: String
@@ -65,47 +65,47 @@ class WaveFile(private val filePath: String) {
             8 -> "L R C LFE Ls Rs Lrs Rrs"
             10 -> "L R C LFE Ls Rs Ltf Rtf Ltb Rtb"
             12 -> "L R C LFE Ls Rs Lrs Rrs Ltf Rtf Ltb Rtb"
-            else -> "${channelCount}声道 → 立体声 (L R)"
+            else -> "$channelCount channels → Stereo (L R)"
         }
 
     /**
-     * 打开WAV文件并解析头部信息
+     * Open WAV file and parse header information
      */
     fun open(): Boolean {
-        Log.d(TAG, "打开WAV文件: $filePath")
+        Log.d(TAG, "Opening WAV file: $filePath")
         
         try {
-            close() // 确保之前的资源已释放
+            close() // Ensure previous resources are released
             
             val file = File(filePath)
             if (!file.exists()) {
-                Log.e(TAG, "文件不存在: $filePath")
+                Log.e(TAG, "File does not exist: $filePath")
                 return false
             }
             
             if (file.length() < WAV_HEADER_SIZE) {
-                Log.e(TAG, "文件太小，不是有效的WAV文件: ${file.length()} bytes")
+                Log.e(TAG, "File too small, not a valid WAV file: ${file.length()} bytes")
                 return false
             }
             
             fileInputStream = FileInputStream(file)
             
-            // 读取WAV头部
+            // Read WAV header
             val header = ByteArray(WAV_HEADER_SIZE)
             val bytesRead = fileInputStream!!.read(header)
             
             if (bytesRead != WAV_HEADER_SIZE) {
-                Log.e(TAG, "无法读取完整的WAV头部")
+                Log.e(TAG, "Cannot read complete WAV header")
                 return false
             }
             
-            // 验证RIFF标识
+            // Validate RIFF identifier
             if (!isValidRiffHeader(header)) {
-                Log.e(TAG, "不是有效的WAV文件格式")
+                Log.e(TAG, "Not a valid WAV file format")
                 return false
             }
             
-            // 解析音频参数
+            // Parse audio parameters
             sampleRate = readLittleEndianInt(header, SAMPLE_RATE_OFFSET)
             channelCount = readLittleEndianShort(header, CHANNEL_COUNT_OFFSET)
             bitsPerSample = readLittleEndianShort(header, BITS_PER_SAMPLE_OFFSET)
@@ -113,24 +113,24 @@ class WaveFile(private val filePath: String) {
             byteRate = readLittleEndianInt(header, BYTE_RATE_OFFSET)
             blockAlign = readLittleEndianShort(header, BLOCK_ALIGN_OFFSET)
             
-            // 验证参数有效性和一致性
+            // Validate parameter validity and consistency
             if (!validateAudioParameters()) {
                 return false
             }
             
             isFileOpen = true
-            Log.i(TAG, "WAV文件打开成功: ${sampleRate}Hz, $channelDescription, ${bitsPerSample}bit, 时长${String.format(java.util.Locale.US, "%.2f", duration)}s")
+            Log.i(TAG, "WAV file opened successfully: ${sampleRate}Hz, $channelDescription, ${bitsPerSample}bit, duration ${String.format(java.util.Locale.US, "%.2f", duration)}s")
             return true
             
         } catch (e: Exception) {
-            Log.e(TAG, "打开文件失败: $filePath", e)
+            Log.e(TAG, "Failed to open file: $filePath", e)
             close()
             return false
         }
     }
 
     /**
-     * 读取音频数据
+     * Read audio data
      */
     fun readData(buffer: ByteArray, offset: Int, length: Int): Int {
         if (!isFileOpen || fileInputStream == null) {
@@ -140,22 +140,22 @@ class WaveFile(private val filePath: String) {
         return try {
             fileInputStream!!.read(buffer, offset, length)
         } catch (e: IOException) {
-            Log.e(TAG, "读取数据失败", e)
+            Log.e(TAG, "Failed to read data", e)
             close()
             -1
         }
     }
 
     /**
-     * 关闭文件
+     * Close file
      */
     fun close() {
         if (isFileOpen || fileInputStream != null) {
-            Log.d(TAG, "关闭WAV文件")
+            Log.d(TAG, "Closing WAV file")
             try {
                 fileInputStream?.close()
             } catch (e: IOException) {
-                Log.w(TAG, "关闭文件时出错", e)
+                Log.w(TAG, "Error closing file", e)
             } finally {
                 fileInputStream = null
                 isFileOpen = false
@@ -164,7 +164,7 @@ class WaveFile(private val filePath: String) {
     }
 
     /**
-     * 检查文件是否有效
+     * Check if file is valid
      */
     fun isValid(): Boolean {
         return isFileOpen && sampleRate > 0 && channelCount > 0 && bitsPerSample > 0
@@ -175,55 +175,55 @@ class WaveFile(private val filePath: String) {
     }
 
     /**
-     * 验证音频参数的有效性和一致性
+     * Validate audio parameter validity and consistency
      */
     private fun validateAudioParameters(): Boolean {
-        // 基本参数检查
+        // Basic parameter check
         if (sampleRate <= 0 || channelCount <= 0 || bitsPerSample <= 0) {
-            Log.e(TAG, "无效的音频参数: ${sampleRate}Hz, ${channelCount}ch, ${bitsPerSample}bit")
+            Log.e(TAG, "Invalid audio parameters: ${sampleRate}Hz, ${channelCount}ch, ${bitsPerSample}bit")
             return false
         }
         
-        // 检查参数范围
+        // Check parameter ranges
         if (sampleRate !in 8000..192000) {
-            Log.w(TAG, "采样率超出常见范围: ${sampleRate}Hz")
+            Log.w(TAG, "Sample rate outside common range: ${sampleRate}Hz")
         }
         
         if (channelCount > 16) {
-            Log.w(TAG, "声道数超出支持范围: ${channelCount}声道")
+            Log.w(TAG, "Channel count exceeds supported range: $channelCount channels")
             return false
         } else if (channelCount > 12) {
-            Log.w(TAG, "声道数较多: ${channelCount}声道，可能不被所有设备支持")
+            Log.w(TAG, "High channel count: $channelCount channels, may not be supported by all devices")
         } else if (channelCount == 12) {
-            Log.i(TAG, "检测到7.1.4音频格式 (12通道)")
+            Log.i(TAG, "Detected 7.1.4 audio format (12 channels)")
         }
         
         if (bitsPerSample !in listOf(8, 16, 24, 32)) {
-            Log.w(TAG, "不常见的位深度: ${bitsPerSample}bit")
+            Log.w(TAG, "Uncommon bit depth: ${bitsPerSample}bit")
         }
         
-        // 验证计算一致性
+        // Validate calculation consistency
         val expectedByteRate = sampleRate * channelCount * (bitsPerSample / 8)
         val expectedBlockAlign = channelCount * (bitsPerSample / 8)
         
         if (byteRate != expectedByteRate) {
-            Log.w(TAG, "字节率不匹配: 期望$expectedByteRate，实际$byteRate")
+            Log.w(TAG, "Byte rate mismatch: expected $expectedByteRate, actual $byteRate")
         }
         
         if (blockAlign != expectedBlockAlign) {
-            Log.w(TAG, "块对齐不匹配: 期望$expectedBlockAlign，实际$blockAlign")
+            Log.w(TAG, "Block align mismatch: expected $expectedBlockAlign, actual $blockAlign")
         }
         
-        // 特殊格式信息
+        // Special format information
         if (channelCount >= 10) {
-            Log.i(TAG, "3D音频格式: $channelDescription, 声道布局: $channelLayout")
+            Log.i(TAG, "3D audio format: $channelDescription, channel layout: $channelLayout")
         }
         
-        Log.d(TAG, "音频参数验证完成: ${sampleRate}Hz, $channelDescription, ${bitsPerSample}bit")
+        Log.d(TAG, "Audio parameter validation completed: ${sampleRate}Hz, $channelDescription, ${bitsPerSample}bit")
         return true
     }
 
-    // 辅助方法
+    // Helper methods
     private fun isValidRiffHeader(header: ByteArray): Boolean {
         return header[RIFF_OFFSET].toInt().toChar() == 'R' &&
                header[RIFF_OFFSET + 1].toInt().toChar() == 'I' &&

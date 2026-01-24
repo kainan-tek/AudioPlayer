@@ -8,20 +8,21 @@ import androidx.lifecycle.viewModelScope
 import com.example.audioplayer.R
 import com.example.audioplayer.config.AudioConfig
 import com.example.audioplayer.player.AudioPlayer
+import com.example.audioplayer.player.PlayerState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 /**
- * 简洁的播放器ViewModel，管理UI状态和音频播放逻辑
- * 支持从外部JSON文件加载音频配置
+ * Concise player ViewModel, manages UI state and audio playback logic
+ * Supports loading audio configuration from external JSON files
  */
 class PlayerViewModel(application: Application) : AndroidViewModel(application) {
     
     private val audioPlayer = AudioPlayer(application.applicationContext)
     
-    // UI状态
-    private val _isPlaying = MutableLiveData(false)
-    val isPlaying: LiveData<Boolean> = _isPlaying
+    // UI state
+    private val _playerState = MutableLiveData(PlayerState.IDLE)
+    val playerState: LiveData<PlayerState> = _playerState
     
     private val _statusMessage = MutableLiveData<String>()
     val statusMessage: LiveData<String> = _statusMessage
@@ -42,7 +43,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     /**
-     * 加载配置文件
+     * Load configuration files
      */
     private fun loadConfigurations() {
         viewModelScope.launch(Dispatchers.IO) {
@@ -50,32 +51,52 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             updateUI {
                 _availableConfigs.value = configs
                 if (configs.isNotEmpty()) {
-                    // 设置第一个配置为默认配置
+                    // Set first configuration as default
                     val defaultConfig = configs[0]
                     audioPlayer.setAudioConfig(defaultConfig)
                     _currentConfig.value = defaultConfig
-                    _statusMessage.value = "配置已加载: ${configs.size} 个配置"
+                    _statusMessage.value = "Configuration loaded: ${configs.size} configs"
                 }
             }
         }
     }
 
     /**
-     * 重新加载配置文件
+     * Reload configuration files
      */
     fun reloadConfigurations() {
-        if (_isPlaying.value == true) {
+        if (_playerState.value == PlayerState.PLAYING) {
             updateUI {
-                _statusMessage.value = "播放中无法重新加载配置"
+                _statusMessage.value = "Cannot reload configuration while playing"
+                _errorMessage.value = "Please stop playback before reloading configuration"
             }
             return
         }
         
         viewModelScope.launch(Dispatchers.IO) {
-            val configs = AudioConfig.reloadConfigs(getApplication())
-            updateUI {
-                _availableConfigs.value = configs
-                _statusMessage.value = "配置已重新加载: ${configs.size} 个配置"
+            try {
+                val configs = AudioConfig.reloadConfigs(getApplication())
+                updateUI {
+                    if (configs.isNotEmpty()) {
+                        _availableConfigs.value = configs
+                        // If current configuration is not in new configuration list, set first one as default
+                        val currentConfigDescription = _currentConfig.value?.description
+                        val newCurrentConfig = configs.find { it.description == currentConfigDescription } 
+                            ?: configs[0]
+                        
+                        audioPlayer.setAudioConfig(newCurrentConfig)
+                        _currentConfig.value = newCurrentConfig
+                        _statusMessage.value = "Configuration reloaded successfully: ${configs.size} configs"
+                    } else {
+                        _statusMessage.value = "Configuration file is empty or format error"
+                        _errorMessage.value = "No valid audio configuration found"
+                    }
+                }
+            } catch (e: Exception) {
+                updateUI {
+                    _statusMessage.value = "Configuration reload failed"
+                    _errorMessage.value = "Configuration reload failed: ${e.message}"
+                }
             }
         }
     }
@@ -94,18 +115,18 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
     
     /**
-     * 设置音频配置
+     * Set audio configuration
      */
     fun setAudioConfig(config: AudioConfig) {
         audioPlayer.setAudioConfig(config)
-        _currentConfig.value = config
         updateUI {
-            _statusMessage.value = "配置已更新: ${config.description}"
+            _currentConfig.value = config
+            _statusMessage.value = "Configuration updated: ${config.description}"
         }
     }
     
     /**
-     * 获取所有可用的音频配置
+     * Get all available audio configurations
      */
     fun getAllAudioConfigs(): List<AudioConfig> {
         return _availableConfigs.value ?: emptyList()
@@ -120,21 +141,21 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         audioPlayer.setPlaybackListener(object : AudioPlayer.PlaybackListener {
             override fun onPlaybackStarted() {
                 updateUI {
-                    _isPlaying.value = true
+                    _playerState.value = PlayerState.PLAYING
                     _statusMessage.value = getApplication<Application>().getString(R.string.status_playing)
                 }
             }
 
             override fun onPlaybackStopped() {
                 updateUI {
-                    _isPlaying.value = false
+                    _playerState.value = PlayerState.IDLE
                     _statusMessage.value = getApplication<Application>().getString(R.string.status_stopped)
                 }
             }
 
             override fun onPlaybackError(error: String) {
                 updateUI {
-                    _isPlaying.value = false
+                    _playerState.value = PlayerState.ERROR
                     _statusMessage.value = getApplication<Application>().getString(R.string.error_playback_failed)
                     _errorMessage.value = error
                 }
@@ -145,7 +166,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private fun updateUI(block: () -> Unit) {
         viewModelScope.launch(Dispatchers.Main) {
             block()
-            // 清除错误消息
+            // Clear error message
             _errorMessage.value = null
         }
     }

@@ -4,13 +4,13 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioTrack
 import android.util.Log
+import com.example.audioplayer.utils.AudioConstants
 import org.json.JSONObject
 import java.io.File
-import java.io.FileInputStream
 
 /**
- * 音频配置数据类
- * 包含配置管理功能，支持从外部JSON文件加载配置
+ * Audio configuration data class
+ * Includes configuration management functionality, supports loading configuration from external JSON files
  */
 data class AudioConfig(
     val usage: Int = AudioAttributes.USAGE_MEDIA,
@@ -18,16 +18,16 @@ data class AudioConfig(
     val transferMode: Int = AudioTrack.MODE_STREAM,
     val performanceMode: Int = AudioTrack.PERFORMANCE_MODE_POWER_SAVING,
     val bufferMultiplier: Int = 4,
-    val audioFilePath: String = "/data/48k_2ch_16bit.wav",
+    val audioFilePath: String = AudioConstants.DEFAULT_AUDIO_FILE,
     val minBufferSize: Int = 960,
-    val description: String = "默认配置 (省电模式)"
+    val description: String = "Default configuration (power saving mode)"
 ) {
     /**
-     * 获取配置的详细信息
+     * Get detailed configuration information
      */
     fun getDetailedInfo(): String {
         return buildString {
-            appendLine("配置: $description")
+            appendLine("Configuration: $description")
             appendLine("Usage: ${getUsageString(usage)}")
             appendLine("Content Type: ${getContentTypeString(contentType)}")
             appendLine("Transfer Mode: ${getTransferModeString(transferMode)}")
@@ -45,109 +45,107 @@ data class AudioConfig(
 
     companion object {
         private const val TAG = "AudioConfig"
-        private const val CONFIG_FILE_PATH = "/data/audio_configs.json"
-        private const val ASSETS_CONFIG_FILE = "audio_configs.json"
+        private const val CONFIG_FILE_PATH = AudioConstants.EXTERNAL_CONFIG_PATH
+        private const val ASSETS_CONFIG_FILE = AudioConstants.ASSETS_CONFIG_FILE
 
-        // 常量映射表，避免重复的when表达式
+        // Constant mapping tables to avoid repetitive when expressions
         private val USAGE_MAP = mapOf(
-            AudioAttributes.USAGE_UNKNOWN to "UNKNOWN",
-            AudioAttributes.USAGE_MEDIA to "MEDIA",
-            AudioAttributes.USAGE_VOICE_COMMUNICATION to "VOICE_COMMUNICATION",
-            AudioAttributes.USAGE_VOICE_COMMUNICATION_SIGNALLING to "VOICE_COMMUNICATION_SIGNALLING",
-            AudioAttributes.USAGE_ALARM to "ALARM",
-            AudioAttributes.USAGE_NOTIFICATION to "NOTIFICATION",
-            AudioAttributes.USAGE_NOTIFICATION_RINGTONE to "RINGTONE",
-            AudioAttributes.USAGE_NOTIFICATION_EVENT to "NOTIFICATION_EVENT",
-            AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY to "ACCESSIBILITY",
-            AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE to "NAVIGATION_GUIDANCE",
-            AudioAttributes.USAGE_ASSISTANCE_SONIFICATION to "SYSTEM_SONIFICATION",
-            AudioAttributes.USAGE_GAME to "GAME",
-            AudioAttributes.USAGE_ASSISTANT to "ASSISTANT"
+            AudioAttributes.USAGE_UNKNOWN to "USAGE_UNKNOWN",
+            AudioAttributes.USAGE_MEDIA to "USAGE_MEDIA",
+            AudioAttributes.USAGE_VOICE_COMMUNICATION to "USAGE_VOICE_COMMUNICATION",
+            AudioAttributes.USAGE_VOICE_COMMUNICATION_SIGNALLING to "USAGE_VOICE_COMMUNICATION_SIGNALLING",
+            AudioAttributes.USAGE_ALARM to "USAGE_ALARM",
+            AudioAttributes.USAGE_NOTIFICATION to "USAGE_NOTIFICATION",
+            AudioAttributes.USAGE_NOTIFICATION_RINGTONE to "USAGE_NOTIFICATION_RINGTONE",
+            AudioAttributes.USAGE_NOTIFICATION_EVENT to "USAGE_NOTIFICATION_EVENT",
+            AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY to "USAGE_ASSISTANCE_ACCESSIBILITY",
+            AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE to "USAGE_ASSISTANCE_NAVIGATION_GUIDANCE",
+            AudioAttributes.USAGE_ASSISTANCE_SONIFICATION to "USAGE_ASSISTANCE_SONIFICATION",
+            AudioAttributes.USAGE_GAME to "USAGE_GAME",
+            AudioAttributes.USAGE_ASSISTANT to "USAGE_ASSISTANT"
         )
 
         private val CONTENT_TYPE_MAP = mapOf(
-            AudioAttributes.CONTENT_TYPE_UNKNOWN to "UNKNOWN",
-            AudioAttributes.CONTENT_TYPE_MUSIC to "MUSIC",
-            AudioAttributes.CONTENT_TYPE_MOVIE to "MOVIE",
-            AudioAttributes.CONTENT_TYPE_SPEECH to "SPEECH",
-            AudioAttributes.CONTENT_TYPE_SONIFICATION to "SONIFICATION"
+            AudioAttributes.CONTENT_TYPE_UNKNOWN to "CONTENT_TYPE_UNKNOWN",
+            AudioAttributes.CONTENT_TYPE_MUSIC to "CONTENT_TYPE_MUSIC",
+            AudioAttributes.CONTENT_TYPE_MOVIE to "CONTENT_TYPE_MOVIE",
+            AudioAttributes.CONTENT_TYPE_SPEECH to "CONTENT_TYPE_SPEECH",
+            AudioAttributes.CONTENT_TYPE_SONIFICATION to "CONTENT_TYPE_SONIFICATION"
         )
 
         private val TRANSFER_MODE_MAP = mapOf(
-            AudioTrack.MODE_STREAM to "STREAM",
-            AudioTrack.MODE_STATIC to "STATIC"
+            AudioTrack.MODE_STREAM to "MODE_STREAM",
+            AudioTrack.MODE_STATIC to "MODE_STATIC"
         )
 
         private val PERFORMANCE_MODE_MAP = mapOf(
-            AudioTrack.PERFORMANCE_MODE_LOW_LATENCY to "LOW_LATENCY",
-            AudioTrack.PERFORMANCE_MODE_POWER_SAVING to "POWER_SAVING",
-            AudioTrack.PERFORMANCE_MODE_NONE to "NONE"
+            AudioTrack.PERFORMANCE_MODE_LOW_LATENCY to "PERFORMANCE_MODE_LOW_LATENCY",
+            AudioTrack.PERFORMANCE_MODE_POWER_SAVING to "PERFORMANCE_MODE_POWER_SAVING",
+            AudioTrack.PERFORMANCE_MODE_NONE to "PERFORMANCE_MODE_NONE"
         )
 
         /**
-         * 从外部文件或assets加载配置
+         * Load configurations from external file or assets
          */
         fun loadConfigs(context: Context): List<AudioConfig> {
             return try {
-                // 首先尝试从外部文件加载
+                // First try to load from external file
                 val externalConfigs = loadFromExternalFile()
                 if (externalConfigs.isNotEmpty()) {
-                    Log.i(TAG, "从外部文件加载了 ${externalConfigs.size} 个配置")
+                    Log.i(TAG, "Loaded ${externalConfigs.size} configurations from external file")
                     externalConfigs
                 } else {
-                    // 如果外部文件不存在或为空，从assets加载
-                    Log.i(TAG, "外部配置文件不存在，从assets加载默认配置")
+                    // If external file doesn't exist or is empty, load from assets
+                    Log.i(TAG, "External config file not found, loading default configuration from assets")
                     loadFromAssets(context)
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "加载配置失败，使用空配置列表", e)
+                Log.e(TAG, "Failed to load configurations, using empty configuration list", e)
                 emptyList()
             }
         }
 
         /**
-         * 重新加载配置（用于配置文件更新后）
+         * Reload configurations (used after configuration file updates)
          */
         fun reloadConfigs(context: Context): List<AudioConfig> {
-            Log.i(TAG, "重新加载配置文件")
+            Log.i(TAG, "Reloading configuration file")
             return loadConfigs(context)
         }
 
         /**
-         * 从外部JSON文件加载配置
+         * Load configuration from external JSON file
          */
         private fun loadFromExternalFile(): List<AudioConfig> {
             val file = File(CONFIG_FILE_PATH)
-            if (!file.exists()) {
-                return emptyList()
-            }
-
-            return try {
-                val jsonContent = FileInputStream(file).use { it.readBytes().toString(Charsets.UTF_8) }
-                parseJsonConfigs(jsonContent)
-            } catch (e: Exception) {
-                Log.e(TAG, "读取外部配置文件失败", e)
-                emptyList()
-            }
+            return if (file.exists()) {
+                try {
+                    val content = file.readText(Charsets.UTF_8)
+                    parseJsonConfigs(content)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to read external configuration file", e)
+                    emptyList()
+                }
+            } else emptyList()
         }
 
         /**
-         * 从assets文件夹加载默认配置
+         * Load default configuration from assets folder
          */
         private fun loadFromAssets(context: Context): List<AudioConfig> {
             return try {
-                val jsonContent = context.assets.open(ASSETS_CONFIG_FILE).use {
+                val content = context.assets.open(ASSETS_CONFIG_FILE).use {
                     it.readBytes().toString(Charsets.UTF_8)
                 }
-                parseJsonConfigs(jsonContent)
+                parseJsonConfigs(content)
             } catch (e: Exception) {
-                Log.e(TAG, "从assets加载配置失败，使用空配置列表", e)
+                Log.e(TAG, "Failed to load configuration from assets", e)
                 emptyList()
             }
         }
 
         /**
-         * 解析JSON配置
+         * Parse JSON configuration
          */
         private fun parseJsonConfigs(jsonContent: String): List<AudioConfig> {
             val configs = mutableListOf<AudioConfig>()
@@ -162,16 +160,16 @@ data class AudioConfig(
                     configs.add(config)
                 }
 
-                Log.i(TAG, "成功解析 ${configs.size} 个配置")
+                Log.i(TAG, "Successfully parsed ${configs.size} configurations")
             } catch (e: Exception) {
-                Log.e(TAG, "解析JSON配置失败", e)
+                Log.e(TAG, "Failed to parse JSON configuration", e)
             }
 
             return configs
         }
 
         /**
-         * 解析单个音频配置
+         * Parse single audio configuration
          */
         private fun parseAudioConfig(json: JSONObject): AudioConfig {
             return AudioConfig(
@@ -182,21 +180,25 @@ data class AudioConfig(
                 bufferMultiplier = json.optInt("bufferMultiplier", 4),
                 audioFilePath = json.optString("audioFilePath", "/data/48k_2ch_16bit.wav"),
                 minBufferSize = json.optInt("minBufferSize", 960),
-                description = json.optString("description", "自定义配置")
+                description = json.optString("description", "Custom configuration")
             )
         }
 
-        // 解析方法 - 使用反向映射表
-        private fun parseUsage(usage: String): Int = 
-            USAGE_MAP.entries.find { it.value == usage.uppercase() }?.key ?: AudioAttributes.USAGE_MEDIA
+        // Parsing methods - direct string matching
+        private fun parseUsage(usage: String): Int {
+            return USAGE_MAP.entries.find { it.value == usage.uppercase() }?.key ?: AudioAttributes.USAGE_MEDIA
+        }
 
-        private fun parseContentType(contentType: String): Int = 
-            CONTENT_TYPE_MAP.entries.find { it.value == contentType.uppercase() }?.key ?: AudioAttributes.CONTENT_TYPE_MUSIC
+        private fun parseContentType(contentType: String): Int {
+            return CONTENT_TYPE_MAP.entries.find { it.value == contentType.uppercase() }?.key ?: AudioAttributes.CONTENT_TYPE_MUSIC
+        }
 
-        private fun parseTransferMode(transferMode: String): Int = 
-            TRANSFER_MODE_MAP.entries.find { it.value == transferMode.uppercase() }?.key ?: AudioTrack.MODE_STREAM
+        private fun parseTransferMode(transferMode: String): Int {
+            return TRANSFER_MODE_MAP.entries.find { it.value == transferMode.uppercase() }?.key ?: AudioTrack.MODE_STREAM
+        }
 
-        private fun parsePerformanceMode(performanceMode: String): Int = 
-            PERFORMANCE_MODE_MAP.entries.find { it.value == performanceMode.uppercase() }?.key ?: AudioTrack.PERFORMANCE_MODE_POWER_SAVING
+        private fun parsePerformanceMode(performanceMode: String): Int {
+            return PERFORMANCE_MODE_MAP.entries.find { it.value == performanceMode.uppercase() }?.key ?: AudioTrack.PERFORMANCE_MODE_POWER_SAVING
+        }
     }
 }

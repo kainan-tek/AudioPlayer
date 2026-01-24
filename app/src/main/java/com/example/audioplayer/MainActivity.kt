@@ -1,36 +1,43 @@
 package com.example.audioplayer
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
+import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
+import com.example.audioplayer.config.AudioConfig
+import com.example.audioplayer.player.PlayerState
+import com.example.audioplayer.utils.contentTypeToString
+import com.example.audioplayer.utils.performanceModeToString
+import com.example.audioplayer.utils.transferModeToString
+import com.example.audioplayer.utils.usageToString
 import com.example.audioplayer.viewmodel.PlayerViewModel
-import com.google.android.material.button.MaterialButton
 
 /**
- * 简洁的音频播放器主界面
- * 支持从外部JSON文件加载音频配置，方便测试不同场景
+ * Concise audio player main interface
+ * Supports loading audio configurations from external JSON files for convenient testing of different scenarios
  * 
- * 使用说明:
+ * Usage instructions:
  * 1. adb root && adb remount && adb shell setenforce 0
  * 2. adb push 48k_2ch_16bit.wav /data/
- * 3. adb push 96k_8ch_24bit.wav /data/  (可选，用于高质量音频测试)
- * 4. adb push 48k_12ch_16bit.wav /data/ (可选，用于多声道测试)
- * 5. (可选) adb push audio_configs.json /data/ (自定义配置文件)
- * 6. 安装并运行应用
- * 7. 如果存在 /data/audio_configs.json，应用会使用外部配置；否则使用内置配置
- * 8. 在应用中点击"配置"按钮选择不同的音频配置进行测试
+ * 3. adb push 96k_8ch_24bit.wav /data/  (optional, for high-quality audio testing)
+ * 4. adb push 48k_12ch_16bit.wav /data/ (optional, for multi-channel testing)
+ * 5. (optional) adb push audio_player_configs.json /data/ (custom configuration file)
+ * 6. Install and run the application
+ * 7. If /data/audio_player_configs.json exists, the app will use external configuration; otherwise use built-in configuration
+ * 8. In the app, click the "Configuration" button to select different audio configurations for testing
  * 
- * 系统要求: Android 13 (API 33+)
+ * System requirements: Android 13 (API 33+)
  * 
- * JSON配置文件格式:
+ * JSON configuration file format:
  * {
  *   "configs": [
  *     {
@@ -41,7 +48,7 @@ import com.google.android.material.button.MaterialButton
  *       "bufferMultiplier": 2,
  *       "audioFilePath": "/data/your_audio_file.wav",
  *       "minBufferSize": 480,
- *       "description": "自定义配置名称"
+ *       "description": "Custom configuration name"
  *     }
  *   ]
  * }
@@ -49,13 +56,14 @@ import com.google.android.material.button.MaterialButton
 class MainActivity : AppCompatActivity() {
     
     private lateinit var viewModel: PlayerViewModel
-    private lateinit var playButton: MaterialButton
-    private lateinit var stopButton: MaterialButton
-    private lateinit var configButton: MaterialButton
+    private lateinit var playButton: Button
+    private lateinit var stopButton: Button
+    private lateinit var configButton: Button
     private lateinit var statusText: TextView
     private lateinit var fileInfoText: TextView
 
     companion object {
+        private const val TAG = "MainActivity"
         private const val PERMISSION_REQUEST_CODE = 1001
     }
 
@@ -74,39 +82,39 @@ class MainActivity : AppCompatActivity() {
         stopButton = findViewById(R.id.stopButton)
         configButton = findViewById(R.id.configButton)
         statusText = findViewById(R.id.statusTextView)
-        fileInfoText = findViewById(R.id.fileInfoTextView)
+        fileInfoText = findViewById(R.id.playbackInfoTextView)
     }
 
     private fun initViewModel() {
         viewModel = ViewModelProvider(this)[PlayerViewModel::class.java]
         
-        // 观察播放状态
-        viewModel.isPlaying.observe(this) { isPlaying ->
-            playButton.isEnabled = !isPlaying
-            stopButton.isEnabled = isPlaying
-            configButton.isEnabled = !isPlaying  // 播放时禁用配置更改
+        // Observe playback state
+        viewModel.playerState.observe(this) { state ->
+            updateButtonStates(state)
+            updatePlaybackInfo()
         }
         
-        // 观察状态消息
+        // Observe status messages
         viewModel.statusMessage.observe(this) { message ->
             statusText.text = message
         }
         
-        // 观察错误消息
+        // Observe error messages
         viewModel.errorMessage.observe(this) { error ->
-            error?.let { showToast("错误: $it") }
+            error?.let { handleError(it) }
         }
         
-        // 观察当前配置
+        // Observe current configuration
         viewModel.currentConfig.observe(this) { config ->
             config?.let {
                 configButton.text = getString(R.string.audio_config_format, it.description)
+                updatePlaybackInfo(it)
             }
         }
         
-        // 观察可用配置
+        // Observe available configurations
         viewModel.availableConfigs.observe(this) { configs ->
-            Log.d("MainActivity", "可用配置数量: ${configs.size}")
+            Log.d("MainActivity", "Available configurations count: ${configs.size}")
         }
     }
 
@@ -130,45 +138,113 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * 显示配置选择对话框
+     * Update button states based on playback state
+     */
+    private fun updateButtonStates(state: PlayerState) {
+        when (state) {
+            PlayerState.IDLE -> {
+                playButton.isEnabled = true
+                stopButton.isEnabled = false
+                configButton.isEnabled = true
+            }
+            PlayerState.PLAYING -> {
+                playButton.isEnabled = false
+                stopButton.isEnabled = true
+                configButton.isEnabled = false  // Disable configuration changes during playback
+            }
+            PlayerState.ERROR -> {
+                playButton.isEnabled = true
+                stopButton.isEnabled = false
+                configButton.isEnabled = true
+            }
+        }
+    }
+
+    /**
+     * Handle audio playback errors
+     */
+    private fun handleError(error: String) {
+        Log.e(TAG, "Audio playback error: $error")
+        showToast("Playback error: $error")
+        
+        // Reset playback state
+        resetPlayerState()
+    }
+    
+    /**
+     * Reset player state
+     */
+    private fun resetPlayerState() {
+        playButton.isEnabled = true
+        stopButton.isEnabled = false
+        configButton.isEnabled = true
+        statusText.text = getString(R.string.status_ready)
+    }
+
+    /**
+     * Show configuration selection dialog
      */
     private fun showConfigSelectionDialog() {
         val configs = viewModel.getAllAudioConfigs()
         if (configs.isEmpty()) {
-            showToast("没有可用的配置")
+            showToast("No available configurations")
             return
         }
         
         val configNames = configs.map { it.description }.toMutableList()
-        configNames.add("🔄 重新加载配置文件")
+        configNames.add("🔄 Reload configuration file")
         
         AlertDialog.Builder(this)
-            .setTitle("选择音频配置 (${configs.size} 个配置)")
+            .setTitle("Select Audio Configuration (${configs.size} configurations)")
             .setItems(configNames.toTypedArray()) { _, which ->
                 if (which == configs.size) {
-                    // 重新加载配置
-                    viewModel.reloadConfigurations()
-                    showToast("正在重新加载配置文件...")
+                    // Reload configurations
+                    reloadConfigurations()
                 } else {
-                    // 选择配置
+                    // Select configuration
                     val selectedConfig = configs[which]
                     viewModel.setAudioConfig(selectedConfig)
-                    showToast("已切换到: ${selectedConfig.description}")
+                    showToast("Switched to: ${selectedConfig.description}")
                 }
             }
-            .setNegativeButton("取消", null)
+            .setNegativeButton("Cancel", null)
             .show()
+    }
+    
+    /**
+     * Reload configuration file
+     */
+    private fun reloadConfigurations() {
+        try {
+            viewModel.reloadConfigurations()
+            showToast("Reloading configuration file...")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to reload configurations", e)
+            showToast("Configuration reload failed: ${e.message}")
+        }
     }
 
     private fun checkPermissions() {
         if (!hasAudioPermission()) requestAudioPermission()
     }
 
-    private fun hasAudioPermission(): Boolean = 
-        ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_AUDIO) == PackageManager.PERMISSION_GRANTED
+    private fun hasAudioPermission(): Boolean {
+        return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            // Android 13 (API 33) and above use READ_MEDIA_AUDIO
+            ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_AUDIO) == PackageManager.PERMISSION_GRANTED
+        } else {
+            // Android 12 (API 32) and below use READ_EXTERNAL_STORAGE
+            ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+        }
+    }
 
     private fun requestAudioPermission() {
-        ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_MEDIA_AUDIO), PERMISSION_REQUEST_CODE)
+        val permission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            Manifest.permission.READ_MEDIA_AUDIO
+        } else {
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        }
+        ActivityCompat.requestPermissions(this, arrayOf(permission), PERMISSION_REQUEST_CODE)
     }
 
     override fun onRequestPermissionsResult(
@@ -189,10 +265,42 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        viewModel.stop()
+        try {
+            viewModel.stop()
+            Log.d(TAG, "AudioPlayer resources released successfully")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error releasing AudioPlayer resources", e)
+        }
+    }
+    
+    override fun onPause() {
+        super.onPause()
+        // Pause playback when app goes to background
+        if (viewModel.playerState.value == PlayerState.PLAYING) {
+            viewModel.stop()
+            Log.d(TAG, "Playback paused due to app going to background")
+        }
     }
 
     private fun showToast(message: String) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+    }
+
+    @SuppressLint("SetTextI18n")
+    private fun updatePlaybackInfo() {
+        viewModel.currentConfig.value?.let { config ->
+            updatePlaybackInfo(config)
+        } ?: run {
+            fileInfoText.text = "Playback information"
+        }
+    }
+    
+    @SuppressLint("SetTextI18n")
+    private fun updatePlaybackInfo(config: AudioConfig) {
+        val configInfo = "Current configuration: ${config.description}\n" +
+                "Usage: ${config.usage.usageToString()} | ${config.contentType.contentTypeToString()}\n" +
+                "Mode: ${config.performanceMode.performanceModeToString()} | ${config.transferMode.transferModeToString()}\n" +
+                "File: ${config.audioFilePath}"
+        fileInfoText.text = configInfo
     }
 }

@@ -11,7 +11,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.audioplayer"
-        minSdk = 33
+        minSdk = 32
         versionCode = 1
         versionName = "1.0"
     }

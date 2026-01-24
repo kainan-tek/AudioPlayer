@@ -2,13 +2,17 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.audioplayer">
 
-    <!-- 音频文件读取权限 (API 33+) -->
+    <!-- Audio file read permission (API 33+) -->
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    
+    <!-- Backward compatible storage permission (API 32 and below) -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" 
+        android:maxSdkVersion="32" />
 
-    <!-- 音频焦点和设备控制权限 -->
+    <!-- Audio focus and device control permission -->
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 
-    <!-- 声明应用需要音频输出功能 -->
+    <!-- Declare that the app requires audio output feature -->
     <uses-feature android:name="android.hardware.audio.output" android:required="true" />
 
     <application
