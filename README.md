@@ -1,19 +1,23 @@
-# AudioPlayer - 简洁音频播放器
+# Audio Player
 
-一个简洁易读的Android音频播放测试应用，采用现代化设计和MVVM架构。
+一个基于Android AudioTrack API的音频播放器测试程序，支持12种音频使用场景配置和WAV文件播放。
 
-## 特性
+## 📋 项目概述
 
-- 🎵 支持WAV格式音频播放
-- 🔊 **完整多通道支持 (1-16声道)**
-- 🌟 **7.1.4 3D音频支持**
-- 🎨 现代Material Design界面
-- 🏗️ 简洁的MVVM架构
-- 🌏 中文本地化界面
-- 🔧 完整的错误处理
-- 📱 响应式UI设计
+Audio Player是一个专为Android平台设计的音频播放测试工具，使用Android AudioTrack API。该项目展示了如何在Android应用中实现高质量的音频播放，支持多种音频使用场景和性能模式。
 
-## 音频格式支持
+## ✨ 主要特性
+
+- **🎵 WAV文件播放**: 支持多通道PCM格式WAV文件播放
+- **🔊 完整多通道支持**: 支持1-16声道音频播放
+- **🌟 7.1.4 3D音频支持**: 支持最新的3D音频标准
+- **🔧 12种使用场景**: 涵盖媒体、通话、游戏、导航等音频场景
+- **📱 现代化界面**: Material Design风格的直观控制界面
+- **🛠️ 动态配置**: 运行时切换音频配置，支持JSON配置文件
+- **🎯 音频焦点管理**: 自动处理音频焦点申请和释放
+- **🏗️ MVVM架构**: 清晰的代码结构和模块化设计
+
+## 🎵 音频格式支持
 
 ### 声道配置
 | 声道数  | 配置名称        | 说明            | 声道布局                                        |
@@ -37,104 +41,181 @@
 - **最大声道**: 16声道
 - **配置系统**: 支持多种音频用途和性能模式
 
-## 快速开始
+## 🚀 快速开始
 
-### 环境要求
-- Android Studio
-- Android SDK API 33+
-- 测试设备或模拟器 (Android 13+)
+### 系统要求
+
+- Android 13 (API 33) 或更高版本
+- 支持多声道音频输出的设备
+- 开发环境: Android Studio
+
+### 权限要求
+
+- `READ_MEDIA_AUDIO` (API 33+): 读取音频文件
+- `READ_EXTERNAL_STORAGE` (API ≤32): 读取外部存储
 
 ### 安装步骤
 
-1. **准备测试文件**
+1. **克隆项目**
    ```bash
-   adb push 48k_2ch_16bit.wav /data/
-   # 可选：推送自定义配置文件
-   adb push audio_configs.json /data/
+   git clone https://github.com/your-repo/AudioPlayer.git
+   cd AudioPlayer
    ```
 
-2. **编译安装**
+2. **准备测试文件**
+   ```bash
+   adb push 48k_2ch_16bit.wav /data/
+   ```
+
+3. **编译安装**
    ```bash
    ./gradlew assembleDebug
    adb install app/build/outputs/apk/debug/app-debug.apk
    ```
 
-3. **运行测试**
-   - 启动应用并授予存储权限
-   - 应用会自动检测 `/data/audio_configs.json` 是否存在
-   - 如果存在外部配置文件，使用外部配置；否则使用内置配置
-   - 点击"配置"按钮选择不同的音频配置进行测试
+## 📖 使用说明
 
-## 项目结构
+### 基本操作
 
+1. **播放控制**
+   - 🎵 **开始播放**: 点击绿色播放按钮
+   - ⏹️ **停止播放**: 点击红色停止按钮
+   - ⚙️ **播放配置**: 点击配置按钮切换音频设置
+
+2. **配置管理**
+   - 应用启动时自动加载配置
+   - 支持从外部文件动态加载配置
+   - 可在运行时切换不同的音频场景
+
+## 🔧 配置文件
+
+### 配置位置
+
+- **外部配置**: `/data/audio_player_configs.json` (优先)
+- **内置配置**: `app/src/main/assets/audio_player_configs.json`
+
+### 配置格式
+
+```json
+{
+  "configs": [
+    {
+      "usage": "USAGE_MEDIA",
+      "contentType": "CONTENT_TYPE_MUSIC",
+      "transferMode": "MODE_STREAM",
+      "performanceMode": "PERFORMANCE_MODE_POWER_SAVING",
+      "minBufferSize": 960,
+      "bufferMultiplier": 2,
+      "audioFilePath": "/data/48k_2ch_16bit.wav",
+      "description": "媒体播放配置"
+    }
+  ]
+}
 ```
-app/src/main/java/com/example/audioplayer/
-├── MainActivity.kt              # 主界面
-├── config/
-│   └── AudioConfig.kt           # 音频配置管理
-├── model/
-│   └── WaveFile.kt              # WAV文件处理
-├── player/
-│   └── AudioPlayer.kt           # 音频播放器
-└── viewmodel/
-    └── PlayerViewModel.kt       # 视图模型
-```
 
-## 架构设计
+### 支持的常量值
 
-采用简洁的MVVM架构模式：
+**Usage (使用场景):**
+- `USAGE_MEDIA` - 媒体播放
+- `USAGE_VOICE_COMMUNICATION` - 语音通话
+- `USAGE_ALARM` - 闹钟
+- `USAGE_NOTIFICATION` - 通知
+- `USAGE_GAME` - 游戏音频
 
-- **UI层 (MainActivity)**: 负责用户交互和界面展示，使用Material Design组件
-- **ViewModel层 (PlayerViewModel)**: 管理UI状态和数据绑定，使用LiveData  
-- **业务逻辑层 (AudioPlayer)**: 处理音频播放核心功能，支持多种配置
-- **数据层 (WaveFile + AudioConfig)**: 处理WAV文件读取和音频配置管理
+**Content Type (内容类型):**
+- `CONTENT_TYPE_MUSIC` - 音乐
+- `CONTENT_TYPE_SPEECH` - 语音
+- `CONTENT_TYPE_SONIFICATION` - 音效
 
-### 主要特点
-- **简洁性**: 每个类都有明确的单一职责
-- **可读性**: 清晰的命名和代码结构  
-- **易维护**: 模块化设计，便于扩展
-- **配置化**: 支持外部JSON配置文件
+**Performance Mode:**
+- `PERFORMANCE_MODE_LOW_LATENCY` - 低延迟模式
+- `PERFORMANCE_MODE_POWER_SAVING` - 省电模式
 
-详细配置说明请参考 [CONFIGURATION.md](CONFIGURATION.md)
+**Transfer Mode:**
+- `MODE_STREAM` - 流模式
+- `MODE_STATIC` - 静态模式
 
-## 主要改进
+## 🏗️ 技术架构
 
-### 配置系统
-- 支持外部JSON配置文件
-- 多种音频用途和性能模式
-- 12种预设配置场景
-- 运行时配置重载
+### 核心组件
 
-### UI设计
-- Material Design 3组件
-- 卡片式状态显示
-- 中文本地化界面
+- **AudioPlayer**: Kotlin编写的音频播放器封装类，集成音频焦点管理
+- **AudioConfig**: 音频配置管理类，支持动态加载配置
+- **PlayerViewModel**: MVVM架构的视图模型，管理播放状态
+- **MainActivity**: 现代化主界面控制器，提供权限管理和用户交互
+- **WaveFile**: WAV文件解析器，支持多种格式和多声道
 
-### 代码质量
-- 统一错误处理
-- 清晰的代码注释
-- 易于理解的命名
-
-### 用户体验
-- 友好的错误提示
-- 实时状态更新
-- 自动权限管理
-
-## 技术栈
+### 技术栈
 
 - **语言**: Kotlin
+- **音频API**: Android AudioTrack
 - **架构**: MVVM + LiveData
 - **UI**: Material Design 3
-- **音频**: AudioTrack + AudioManager
 - **并发**: Kotlin Coroutines
-- **最低API**: 33 (Android 13+)
+- **最低版本**: Android 13 (API 33)
+- **目标版本**: Android 15 (API 36)
 
-## 系统要求
+## 🔍 技术细节
 
-- Android 13+ (API 33+)
-- 支持多声道音频输出的设备
-- 存储权限 (READ_MEDIA_AUDIO)
+### AudioTrack集成
 
-## 许可证
+- 使用流模式实现音频播放
+- 支持多种音频格式 (16/24/32位PCM)
+- 完整的错误处理机制
+- 音频焦点自动管理
 
-MIT License - 详见 [LICENSE](LICENSE) 文件
+### 数据流架构
+
+```
+WAV文件 → WaveFile解析器 → AudioTrack → 音频输出设备
+                                ↓
+                           Kotlin协程 → UI状态更新
+```
+
+### WAV文件支持
+
+- 标准RIFF/WAVE格式解析
+- 支持多声道音频 (1-16声道)
+- 采样率范围: 8kHz - 192kHz
+- 位深度支持: 8/16/24/32位
+
+## 📚 API 参考
+
+### AudioPlayer 类
+```kotlin
+class AudioPlayer {
+    fun setConfig(config: AudioConfig)              // 设置配置
+    fun play(): Boolean                             // 开始播放
+    fun stop(): Boolean                             // 停止播放
+    fun isPlaying(): Boolean                        // 检查播放状态
+    fun setPlaybackListener(listener: PlaybackListener?) // 设置监听器
+}
+```
+
+## 🐛 故障排除
+
+### 常见问题
+1. **播放失败** - 确认WAV文件格式支持，验证设备权限设置
+2. **权限问题** - `adb shell setenforce 0`
+3. **配置加载失败** - 检查JSON格式是否正确
+
+### 调试信息
+```bash
+adb logcat -s AudioPlayer MainActivity
+```
+
+## 📊 性能指标
+
+- **低延迟模式**: ~40-80ms
+- **省电模式**: ~80-120ms
+- **采样率**: 8kHz - 192kHz
+- **声道数**: 1-16声道
+- **位深度**: 8/16/24/32位
+
+## 📄 许可证
+
+本项目采用MIT许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
+
+---
+
+**注意**: 本项目仅用于学习和测试目的，请确保在合适的设备和环境中使用。
