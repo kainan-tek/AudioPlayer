@@ -5,7 +5,6 @@
       "contentType": "CONTENT_TYPE_MUSIC",
       "transferMode": "MODE_STREAM",
       "performanceMode": "PERFORMANCE_MODE_POWER_SAVING",
-      "minBufferSize": 960,
       "bufferMultiplier": 2,
       "audioFilePath": "/data/48k_2ch_16bit.wav",
       "description": "Media Playback (Power Saving Mode)"
@@ -15,7 +14,6 @@
       "contentType": "CONTENT_TYPE_SPEECH",
       "transferMode": "MODE_STREAM",
       "performanceMode": "PERFORMANCE_MODE_LOW_LATENCY",
-      "minBufferSize": 480,
       "bufferMultiplier": 1,
       "audioFilePath": "/data/48k_2ch_16bit.wav",
       "description": "Voice Communication (Low Latency)"
@@ -25,7 +23,6 @@
       "contentType": "CONTENT_TYPE_SONIFICATION",
       "transferMode": "MODE_STREAM",
       "performanceMode": "PERFORMANCE_MODE_LOW_LATENCY",
-      "minBufferSize": 480,
       "bufferMultiplier": 1,
       "audioFilePath": "/data/48k_2ch_16bit.wav",
       "description": "Call Signaling Audio (Low Latency)"
@@ -35,7 +32,6 @@
       "contentType": "CONTENT_TYPE_SONIFICATION",
       "transferMode": "MODE_STREAM",
       "performanceMode": "PERFORMANCE_MODE_POWER_SAVING",
-      "minBufferSize": 960,
       "bufferMultiplier": 2,
       "audioFilePath": "/data/48k_2ch_16bit.wav",
       "description": "Alarm Sound (Power Saving Mode)"
@@ -45,7 +41,6 @@
       "contentType": "CONTENT_TYPE_SONIFICATION",
       "transferMode": "MODE_STREAM",
       "performanceMode": "PERFORMANCE_MODE_POWER_SAVING",
-      "minBufferSize": 960,
       "bufferMultiplier": 2,
       "audioFilePath": "/data/48k_2ch_16bit.wav",
       "description": "Notification Sound (Power Saving Mode)"
@@ -55,7 +50,6 @@
       "contentType": "CONTENT_TYPE_SONIFICATION",
       "transferMode": "MODE_STREAM",
       "performanceMode": "PERFORMANCE_MODE_POWER_SAVING",
-      "minBufferSize": 960,
       "bufferMultiplier": 2,
       "audioFilePath": "/data/48k_2ch_16bit.wav",
       "description": "Ringtone Playback (Power Saving Mode)"
@@ -65,7 +59,6 @@
       "contentType": "CONTENT_TYPE_SONIFICATION",
       "transferMode": "MODE_STREAM",
       "performanceMode": "PERFORMANCE_MODE_POWER_SAVING",
-      "minBufferSize": 960,
       "bufferMultiplier": 2,
       "audioFilePath": "/data/48k_2ch_16bit.wav",
       "description": "Notification Event (Power Saving Mode)"
@@ -75,7 +68,6 @@
       "contentType": "CONTENT_TYPE_SPEECH",
       "transferMode": "MODE_STREAM",
       "performanceMode": "PERFORMANCE_MODE_POWER_SAVING",
-      "minBufferSize": 960,
       "bufferMultiplier": 2,
       "audioFilePath": "/data/48k_2ch_16bit.wav",
       "description": "Accessibility Features (Power Saving Mode)"
@@ -85,7 +77,6 @@
       "contentType": "CONTENT_TYPE_SPEECH",
       "transferMode": "MODE_STREAM",
       "performanceMode": "PERFORMANCE_MODE_POWER_SAVING",
-      "minBufferSize": 960,
       "bufferMultiplier": 2,
       "audioFilePath": "/data/48k_2ch_16bit.wav",
       "description": "Navigation Voice (Power Saving Mode)"
@@ -95,18 +86,16 @@
       "contentType": "CONTENT_TYPE_SONIFICATION",
       "transferMode": "MODE_STREAM",
       "performanceMode": "PERFORMANCE_MODE_LOW_LATENCY",
-      "minBufferSize": 480,
-      "bufferMultiplier": 2,
+      "bufferMultiplier": 1,
       "audioFilePath": "/data/48k_2ch_16bit.wav",
       "description": "System Alert Sound (Low Latency)"
     },
     {
       "usage": "USAGE_GAME",
-      "contentType": "CONTENT_TYPE_SONIFICATION",
+      "contentType": "CONTENT_TYPE_MUSIC",
       "transferMode": "MODE_STREAM",
       "performanceMode": "PERFORMANCE_MODE_LOW_LATENCY",
-      "minBufferSize": 480,
-      "bufferMultiplier": 2,
+      "bufferMultiplier": 1,
       "audioFilePath": "/data/48k_2ch_16bit.wav",
       "description": "Game Audio (Low Latency)"
     },
@@ -115,10 +104,54 @@
       "contentType": "CONTENT_TYPE_SPEECH",
       "transferMode": "MODE_STREAM",
       "performanceMode": "PERFORMANCE_MODE_POWER_SAVING",
-      "minBufferSize": 960,
       "bufferMultiplier": 2,
       "audioFilePath": "/data/48k_2ch_16bit.wav",
       "description": "Voice Assistant (Power Saving Mode)"
+    },
+    {
+      "usage": "USAGE_EMERGENCY",
+      "contentType": "CONTENT_TYPE_SONIFICATION",
+      "transferMode": "MODE_STREAM",
+      "performanceMode": "PERFORMANCE_MODE_LOW_LATENCY",
+      "bufferMultiplier": 1,
+      "audioFilePath": "/data/48k_2ch_16bit.wav",
+      "description": "Emergency Alert (Low Latency)"
+    },
+    {
+      "usage": "USAGE_SAFETY",
+      "contentType": "CONTENT_TYPE_SONIFICATION",
+      "transferMode": "MODE_STREAM",
+      "performanceMode": "PERFORMANCE_MODE_LOW_LATENCY",
+      "bufferMultiplier": 1,
+      "audioFilePath": "/data/48k_2ch_16bit.wav",
+      "description": "Safety Warning (Low Latency)"
+    },
+    {
+      "usage": "USAGE_VEHICLE_STATUS",
+      "contentType": "CONTENT_TYPE_SONIFICATION",
+      "transferMode": "MODE_STREAM",
+      "performanceMode": "PERFORMANCE_MODE_POWER_SAVING",
+      "bufferMultiplier": 2,
+      "audioFilePath": "/data/48k_2ch_16bit.wav",
+      "description": "Vehicle Status Alert (Power Saving Mode)"
+    },
+    {
+      "usage": "USAGE_ANNOUNCEMENT",
+      "contentType": "CONTENT_TYPE_SPEECH",
+      "transferMode": "MODE_STREAM",
+      "performanceMode": "PERFORMANCE_MODE_POWER_SAVING",
+      "bufferMultiplier": 2,
+      "audioFilePath": "/data/48k_2ch_16bit.wav",
+      "description": "Public Announcement (Power Saving Mode)"
+    },
+    {
+      "usage": "USAGE_SPEAKER_CLEANUP",
+      "contentType": "CONTENT_TYPE_SONIFICATION",
+      "transferMode": "MODE_STREAM",
+      "performanceMode": "PERFORMANCE_MODE_LOW_LATENCY",
+      "bufferMultiplier": 1,
+      "audioFilePath": "/data/48k_2ch_16bit.wav",
+      "description": "Speaker Cleanup Signal (Low Latency)"
     }
   ]
 }

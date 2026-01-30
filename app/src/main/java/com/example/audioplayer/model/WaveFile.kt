@@ -6,7 +6,8 @@ import java.io.FileInputStream
 import java.io.IOException
 
 /**
- * Concise WAV file reading class
+ * WAV file reader for audio playback
+ * Handles WAV file parsing and audio data reading with comprehensive validation
  */
 class WaveFile(private val filePath: String) {
     
@@ -130,10 +131,16 @@ class WaveFile(private val filePath: String) {
     }
 
     /**
-     * Read audio data
+     * Read audio data with improved error handling
      */
     fun readData(buffer: ByteArray, offset: Int, length: Int): Int {
         if (!isFileOpen || fileInputStream == null) {
+            Log.w(TAG, "File not open for reading")
+            return -1
+        }
+        
+        if (offset < 0 || length < 0 || offset + length > buffer.size) {
+            Log.w(TAG, "Invalid read parameters: offset=$offset, length=$length, bufferSize=${buffer.size}")
             return -1
         }
         
@@ -206,24 +213,14 @@ class WaveFile(private val filePath: String) {
         val expectedByteRate = sampleRate * channelCount * (bitsPerSample / 8)
         val expectedBlockAlign = channelCount * (bitsPerSample / 8)
         
-        if (byteRate != expectedByteRate) {
-            Log.w(TAG, "Byte rate mismatch: expected $expectedByteRate, actual $byteRate")
+        if (byteRate != expectedByteRate || blockAlign != expectedBlockAlign) {
+            Log.w(TAG, "Header mismatch - ByteRate: expected=$expectedByteRate, actual=$byteRate; BlockAlign: expected=$expectedBlockAlign, actual=$blockAlign")
         }
         
-        if (blockAlign != expectedBlockAlign) {
-            Log.w(TAG, "Block align mismatch: expected $expectedBlockAlign, actual $blockAlign")
-        }
-        
-        // Special format information
-        if (channelCount >= 10) {
-            Log.i(TAG, "3D audio format: $channelDescription, channel layout: $channelLayout")
-        }
-        
-        Log.d(TAG, "Audio parameter validation completed: ${sampleRate}Hz, $channelDescription, ${bitsPerSample}bit")
         return true
     }
 
-    // Helper methods
+    // Helper methods - consistent with AudioRecorder implementation
     private fun isValidRiffHeader(header: ByteArray): Boolean {
         return header[RIFF_OFFSET].toInt().toChar() == 'R' &&
                header[RIFF_OFFSET + 1].toInt().toChar() == 'I' &&

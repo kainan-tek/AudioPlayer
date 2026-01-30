@@ -4,7 +4,6 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioTrack
 import android.util.Log
-import com.example.audioplayer.utils.AudioConstants
 import org.json.JSONObject
 import java.io.File
 
@@ -18,8 +17,7 @@ data class AudioConfig(
     val transferMode: Int = AudioTrack.MODE_STREAM,
     val performanceMode: Int = AudioTrack.PERFORMANCE_MODE_POWER_SAVING,
     val bufferMultiplier: Int = 4,
-    val audioFilePath: String = AudioConstants.DEFAULT_AUDIO_FILE,
-    val minBufferSize: Int = 960,
+    val audioFilePath: String = "/data/48k_2ch_16bit.wav",
     val description: String = "Default configuration (power saving mode)"
 ) {
     /**
@@ -34,7 +32,6 @@ data class AudioConfig(
             appendLine("Performance Mode: ${getPerformanceModeString(performanceMode)}")
             appendLine("Buffer Multiplier: ${bufferMultiplier}x")
             appendLine("Audio File: $audioFilePath")
-            appendLine("Min Buffer Size: $minBufferSize bytes")
         }.trim()
     }
     
@@ -45,8 +42,8 @@ data class AudioConfig(
 
     companion object {
         private const val TAG = "AudioConfig"
-        private const val CONFIG_FILE_PATH = AudioConstants.EXTERNAL_CONFIG_PATH
-        private const val ASSETS_CONFIG_FILE = AudioConstants.ASSETS_CONFIG_FILE
+        private const val CONFIG_FILE_PATH = "/data/audio_player_configs.json"
+        private const val ASSETS_CONFIG_FILE = "audio_player_configs.json"
 
         // Constant mapping tables to avoid repetitive when expressions
         private val USAGE_MAP = mapOf(
@@ -62,7 +59,13 @@ data class AudioConfig(
             AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE to "USAGE_ASSISTANCE_NAVIGATION_GUIDANCE",
             AudioAttributes.USAGE_ASSISTANCE_SONIFICATION to "USAGE_ASSISTANCE_SONIFICATION",
             AudioAttributes.USAGE_GAME to "USAGE_GAME",
-            AudioAttributes.USAGE_ASSISTANT to "USAGE_ASSISTANT"
+            AudioAttributes.USAGE_ASSISTANT to "USAGE_ASSISTANT",
+            // Android Automotive OS (AAOS) special usage values
+            1000 to "USAGE_EMERGENCY",
+            1001 to "USAGE_SAFETY",
+            1002 to "USAGE_VEHICLE_STATUS",
+            1003 to "USAGE_ANNOUNCEMENT",
+            1004 to "USAGE_SPEAKER_CLEANUP"
         )
 
         private val CONTENT_TYPE_MAP = mapOf(
@@ -179,26 +182,29 @@ data class AudioConfig(
                 performanceMode = parsePerformanceMode(json.optString("performanceMode", "POWER_SAVING")),
                 bufferMultiplier = json.optInt("bufferMultiplier", 4),
                 audioFilePath = json.optString("audioFilePath", "/data/48k_2ch_16bit.wav"),
-                minBufferSize = json.optInt("minBufferSize", 960),
                 description = json.optString("description", "Custom configuration")
             )
         }
 
-        // Parsing methods - direct string matching
-        private fun parseUsage(usage: String): Int {
-            return USAGE_MAP.entries.find { it.value == usage.uppercase() }?.key ?: AudioAttributes.USAGE_MEDIA
-        }
+        // Parsing methods - direct string matching with improved error handling
+        private fun parseUsage(usage: String): Int = 
+            parseEnumValue(USAGE_MAP, usage, AudioAttributes.USAGE_MEDIA, "Usage")
 
-        private fun parseContentType(contentType: String): Int {
-            return CONTENT_TYPE_MAP.entries.find { it.value == contentType.uppercase() }?.key ?: AudioAttributes.CONTENT_TYPE_MUSIC
-        }
+        private fun parseContentType(contentType: String): Int = 
+            parseEnumValue(CONTENT_TYPE_MAP, contentType, AudioAttributes.CONTENT_TYPE_MUSIC, "ContentType")
 
-        private fun parseTransferMode(transferMode: String): Int {
-            return TRANSFER_MODE_MAP.entries.find { it.value == transferMode.uppercase() }?.key ?: AudioTrack.MODE_STREAM
-        }
+        private fun parseTransferMode(transferMode: String): Int = 
+            parseEnumValue(TRANSFER_MODE_MAP, transferMode, AudioTrack.MODE_STREAM, "TransferMode")
 
-        private fun parsePerformanceMode(performanceMode: String): Int {
-            return PERFORMANCE_MODE_MAP.entries.find { it.value == performanceMode.uppercase() }?.key ?: AudioTrack.PERFORMANCE_MODE_POWER_SAVING
+        private fun parsePerformanceMode(performanceMode: String): Int = 
+            parseEnumValue(PERFORMANCE_MODE_MAP, performanceMode, AudioTrack.PERFORMANCE_MODE_POWER_SAVING, "PerformanceMode")
+
+        private fun parseEnumValue(map: Map<Int, String>, value: String, default: Int, typeName: String = ""): Int {
+            val result = map.entries.find { it.value == value.uppercase() }?.key ?: default
+            if (result == default && value.isNotEmpty()) {
+                Log.w(TAG, "Unknown $typeName value: $value, using default")
+            }
+            return result
         }
     }
 }

@@ -74,7 +74,7 @@ class MainActivity : AppCompatActivity() {
         initViews()
         initViewModel()
         setupClickListeners()
-        checkPermissions()
+        if (!hasAudioPermission()) requestAudioPermission()
     }
 
     private fun initViews() {
@@ -111,21 +111,15 @@ class MainActivity : AppCompatActivity() {
                 updatePlaybackInfo(it)
             }
         }
-        
-        // Observe available configurations
-        viewModel.availableConfigs.observe(this) { configs ->
-            Log.d("MainActivity", "Available configurations count: ${configs.size}")
-        }
     }
 
     private fun setupClickListeners() {
         playButton.setOnClickListener {
-            if (hasAudioPermission()) {
-                viewModel.play()
-            } else {
-                showToast(getString(R.string.error_permission_denied))
+            if (!hasAudioPermission()) {
                 requestAudioPermission()
+                return@setOnClickListener
             }
+            viewModel.play()
         }
         
         stopButton.setOnClickListener {
@@ -175,9 +169,7 @@ class MainActivity : AppCompatActivity() {
      * Reset player state
      */
     private fun resetPlayerState() {
-        playButton.isEnabled = true
-        stopButton.isEnabled = false
-        configButton.isEnabled = true
+        updateButtonStates(PlayerState.IDLE)
         statusText.text = getString(R.string.status_ready)
     }
 
@@ -224,10 +216,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun checkPermissions() {
-        if (!hasAudioPermission()) requestAudioPermission()
-    }
-
     private fun hasAudioPermission(): Boolean {
         return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             // Android 13 (API 33) and above use READ_MEDIA_AUDIO
@@ -244,7 +232,20 @@ class MainActivity : AppCompatActivity() {
         } else {
             Manifest.permission.READ_EXTERNAL_STORAGE
         }
-        ActivityCompat.requestPermissions(this, arrayOf(permission), PERMISSION_REQUEST_CODE)
+        
+        if (ActivityCompat.shouldShowRequestPermissionRationale(this, permission)) {
+            // Show explanation dialog
+            AlertDialog.Builder(this)
+                .setTitle("Permission Required")
+                .setMessage("This app needs audio file access permission to play audio files.")
+                .setPositiveButton("Grant") { _, _ ->
+                    ActivityCompat.requestPermissions(this, arrayOf(permission), PERMISSION_REQUEST_CODE)
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        } else {
+            ActivityCompat.requestPermissions(this, arrayOf(permission), PERMISSION_REQUEST_CODE)
+        }
     }
 
     override fun onRequestPermissionsResult(
@@ -254,12 +255,13 @@ class MainActivity : AppCompatActivity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                showToast(getString(R.string.permission_granted))
+        if (requestCode == PERMISSION_REQUEST_CODE && grantResults.isNotEmpty()) {
+            val message = if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                getString(R.string.permission_granted)
             } else {
-                showToast(getString(R.string.permission_required))
+                getString(R.string.permission_required)
             }
+            showToast(message)
         }
     }
 

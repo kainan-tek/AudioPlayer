@@ -34,7 +34,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val currentConfig: LiveData<AudioConfig> = _currentConfig
     
     private val _availableConfigs = MutableLiveData<List<AudioConfig>>()
-    val availableConfigs: LiveData<List<AudioConfig>> = _availableConfigs
 
     init {
         setupAudioPlayerListener()
@@ -48,7 +47,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private fun loadConfigurations() {
         viewModelScope.launch(Dispatchers.IO) {
             val configs = AudioConfig.loadConfigs(getApplication())
-            updateUI {
+            updateUI({
                 _availableConfigs.value = configs
                 if (configs.isNotEmpty()) {
                     // Set first configuration as default
@@ -57,7 +56,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                     _currentConfig.value = defaultConfig
                     _statusMessage.value = "Configuration loaded: ${configs.size} configs"
                 }
-            }
+            })
         }
     }
 
@@ -66,17 +65,17 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
      */
     fun reloadConfigurations() {
         if (_playerState.value == PlayerState.PLAYING) {
-            updateUI {
+            updateUI({
                 _statusMessage.value = "Cannot reload configuration while playing"
                 _errorMessage.value = "Please stop playback before reloading configuration"
-            }
+            })
             return
         }
         
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val configs = AudioConfig.reloadConfigs(getApplication())
-                updateUI {
+                updateUI({
                     if (configs.isNotEmpty()) {
                         _availableConfigs.value = configs
                         // If current configuration is not in new configuration list, set first one as default
@@ -91,12 +90,12 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                         _statusMessage.value = "Configuration file is empty or format error"
                         _errorMessage.value = "No valid audio configuration found"
                     }
-                }
+                })
             } catch (e: Exception) {
-                updateUI {
+                updateUI({
                     _statusMessage.value = "Configuration reload failed"
                     _errorMessage.value = "Configuration reload failed: ${e.message}"
-                }
+                })
             }
         }
     }
@@ -119,10 +118,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
      */
     fun setAudioConfig(config: AudioConfig) {
         audioPlayer.setAudioConfig(config)
-        updateUI {
+        updateUI({
             _currentConfig.value = config
             _statusMessage.value = "Configuration updated: ${config.description}"
-        }
+        })
     }
     
     /**
@@ -140,34 +139,38 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private fun setupAudioPlayerListener() {
         audioPlayer.setPlaybackListener(object : AudioPlayer.PlaybackListener {
             override fun onPlaybackStarted() {
-                updateUI {
+                updateUI({
                     _playerState.value = PlayerState.PLAYING
                     _statusMessage.value = getApplication<Application>().getString(R.string.status_playing)
-                }
+                })
             }
 
             override fun onPlaybackStopped() {
-                updateUI {
+                updateUI({
                     _playerState.value = PlayerState.IDLE
                     _statusMessage.value = getApplication<Application>().getString(R.string.status_stopped)
-                }
+                })
             }
 
             override fun onPlaybackError(error: String) {
-                updateUI {
+                updateUI({
                     _playerState.value = PlayerState.ERROR
                     _statusMessage.value = getApplication<Application>().getString(R.string.error_playback_failed)
                     _errorMessage.value = error
-                }
+                })
             }
         })
     }
 
-    private fun updateUI(block: () -> Unit) {
+    /**
+     * Execute UI updates on Main thread, clearing error message by default
+     */
+    private fun updateUI(block: () -> Unit, clearError: Boolean = true) {
         viewModelScope.launch(Dispatchers.Main) {
             block()
-            // Clear error message
-            _errorMessage.value = null
+            if (clearError) {
+                _errorMessage.value = null
+            }
         }
     }
 }

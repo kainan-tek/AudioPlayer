@@ -1,18 +1,14 @@
 package com.example.audioplayer.player
 
-import android.Manifest
 import android.content.Context
-import android.content.pm.PackageManager
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
 import android.util.Log
-import androidx.core.content.ContextCompat
 import com.example.audioplayer.config.AudioConfig
 import com.example.audioplayer.model.WaveFile
-import com.example.audioplayer.utils.AudioConstants
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -67,6 +63,8 @@ class AudioPlayer(private val context: Context) {
         this.listener = listener
     }
     
+
+
     /**
      * Set audio configuration
      */
@@ -85,20 +83,6 @@ class AudioPlayer(private val context: Context) {
      */
     fun play(): Boolean {
         Log.d(TAG, "Starting playback")
-        
-        // Check permissions
-        val hasPermission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            // Android 13 (API 33) and above use READ_MEDIA_AUDIO
-            ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_AUDIO) == PackageManager.PERMISSION_GRANTED
-        } else {
-            // Android 12 (API 32) and below use READ_EXTERNAL_STORAGE
-            ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
-        }
-        
-        if (!hasPermission) {
-            handleError("Audio file read permission not granted")
-            return false
-        }
         
         if (isPlaying.get()) {
             Log.i(TAG, "Already playing, stopping current playback first")
@@ -157,7 +141,11 @@ class AudioPlayer(private val context: Context) {
         Log.d(TAG, "Releasing player resources")
         stop()
         listener = null  // Clear listener reference to prevent memory leaks
-        playbackScope.cancel()
+        try {
+            playbackScope.cancel()
+        } catch (e: Exception) {
+            Log.w(TAG, "Error canceling playback scope", e)
+        }
     }
 
     /**
@@ -206,7 +194,8 @@ class AudioPlayer(private val context: Context) {
                 return false
             }
             
-            val bufferSize = maxOf(minBufferSize * currentConfig.bufferMultiplier, currentConfig.minBufferSize)
+            val bufferSize = minBufferSize * currentConfig.bufferMultiplier
+            Log.d(TAG, "Buffer calculation: minBufferSize=$minBufferSize, multiplier=${currentConfig.bufferMultiplier}, final=$bufferSize")
 
             // Create AudioAttributes using configuration parameters
             val audioAttributes = AudioAttributes.Builder()
@@ -311,7 +300,6 @@ class AudioPlayer(private val context: Context) {
             .build()
 
         val result = audioManager?.requestAudioFocus(request) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
-        
         // Only save request object when focus is successfully obtained
         if (result) {
             focusRequest = request
@@ -331,44 +319,39 @@ class AudioPlayer(private val context: Context) {
     }
 
     /**
-     * Start playback loop, adjusting buffer based on configuration and channel count
+     * Start playback loop, using consistent buffer sizing
      */
     private fun startPlaybackLoop() {
         playbackJob = playbackScope.launch {
             val waveFile = waveFile ?: return@launch
+            val audioTrack = audioTrack ?: return@launch
             
-            // Adjust buffer size based on configuration and channel count
-            val baseBufferSize = when {
-                waveFile.channelCount >= 12 -> AudioConstants.BUFFER_SIZE_12CH
-                waveFile.channelCount >= 8 -> AudioConstants.BUFFER_SIZE_8CH
-                waveFile.channelCount >= 6 -> AudioConstants.BUFFER_SIZE_6CH
-                else -> AudioConstants.BUFFER_SIZE_DEFAULT
+            // Use a write buffer that's a fraction of the AudioTrack's internal buffer
+            // This ensures smooth playback without underruns
+            val audioTrackBufferSize = audioTrack.bufferSizeInFrames * waveFile.channelCount * (waveFile.bitsPerSample / 8)
+            val writeBufferSize = when (currentConfig.performanceMode) {
+                AudioTrack.PERFORMANCE_MODE_LOW_LATENCY -> audioTrackBufferSize / 4  // Smaller chunks for low latency
+                AudioTrack.PERFORMANCE_MODE_POWER_SAVING -> audioTrackBufferSize / 2  // Larger chunks for power saving
+                else -> audioTrackBufferSize / 3  // Default: 1/3 of AudioTrack buffer
             }
             
-            // Adjust buffer based on performance mode
-            val bufferSize = when (currentConfig.performanceMode) {
-                AudioTrack.PERFORMANCE_MODE_LOW_LATENCY -> baseBufferSize / 2  // Low latency mode uses smaller buffer
-                AudioTrack.PERFORMANCE_MODE_POWER_SAVING -> baseBufferSize * 2  // Power saving mode uses larger buffer
-                else -> baseBufferSize
-            }
-            
-            val buffer = ByteArray(bufferSize)
+            val buffer = ByteArray(writeBufferSize)
             var totalBytes = 0L
             val startTime = System.currentTimeMillis()
             
-            audioTrack?.play()
-            Log.i(TAG, "Started playing ${waveFile.channelDescription} audio, config: ${currentConfig.description}, buffer: $bufferSize bytes")
+            audioTrack.play()
+            Log.i(TAG, "Started playing ${waveFile.channelDescription} audio, config: ${currentConfig.description}")
+            Log.d(TAG, "AudioTrack buffer: $audioTrackBufferSize bytes, Write buffer: $writeBufferSize bytes")
             
             try {
                 while (isActive && isPlaying.get()) {
                     val bytesRead = waveFile.readData(buffer, 0, buffer.size)
-                    
                     if (bytesRead <= 0) {
                         Log.d(TAG, "File reading completed")
                         break
                     }
                     
-                    val bytesWritten = audioTrack?.write(buffer, 0, bytesRead) ?: -1
+                    val bytesWritten = audioTrack.write(buffer, 0, bytesRead)
                     if (bytesWritten < 0) {
                         Log.e(TAG, "AudioTrack write failed: $bytesWritten")
                         break
@@ -376,8 +359,8 @@ class AudioPlayer(private val context: Context) {
                     
                     totalBytes += bytesRead
                     
-                    // Periodically output playback progress
-                    if (totalBytes % AudioConstants.PROGRESS_LOG_INTERVAL == 0L && totalBytes > 0) {
+                    // Periodically output playback progress (every 1MB)
+                    if (totalBytes % (1024 * 1024L) == 0L && totalBytes > 0) {
                         val elapsed = (System.currentTimeMillis() - startTime) / 1000.0
                         val mbPlayed = totalBytes / (1024.0 * 1024.0)
                         Log.d(TAG, "Playback progress: ${String.format(java.util.Locale.US, "%.1f", mbPlayed)}MB, elapsed: ${String.format(java.util.Locale.US, "%.1f", elapsed)}s")
@@ -399,7 +382,7 @@ class AudioPlayer(private val context: Context) {
     }
 
     /**
-     * Release resources
+     * Release audio resources consistently
      */
     private fun releaseResources() {
         try {
@@ -413,7 +396,7 @@ class AudioPlayer(private val context: Context) {
 
             abandonAudioFocus()  // Use dedicated method to release audio focus
             audioManager = null
-            
+
             waveFile?.close()
             waveFile = null
         } catch (e: Exception) {
@@ -422,11 +405,11 @@ class AudioPlayer(private val context: Context) {
     }
 
     /**
-     * Handle errors
+     * Handle errors consistently
      */
     private fun handleError(message: String) {
         isPlaying.set(false)  // Stop playback on error
-        Log.e(TAG, message)
+        Log.e(TAG, "Error: $message")
         listener?.onPlaybackError(message)
         releaseResources()
     }
@@ -442,7 +425,8 @@ class AudioPlayer(private val context: Context) {
             6 to AudioFormat.CHANNEL_OUT_5POINT1,
             8 to AudioFormat.CHANNEL_OUT_7POINT1_SURROUND,
             10 to AudioFormat.CHANNEL_OUT_5POINT1POINT4,
-            12 to AudioFormat.CHANNEL_OUT_7POINT1POINT4
+            12 to AudioFormat.CHANNEL_OUT_7POINT1POINT4,
+            16 to AudioFormat.CHANNEL_OUT_9POINT1POINT6
         )
         
         return channelMasks[channelCount] ?: run {
