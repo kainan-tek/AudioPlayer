@@ -184,7 +184,7 @@ class AudioPlayer(private val context: Context) {
 
             // Create AudioTrack
             val channelMask = AudioConstants.getChannelMask(waveFile.channelCount)
-            val audioFormat = AudioConstants.getAudioFormat(waveFile.bitsPerSample)
+            val audioFormat = AudioConstants.getFormatFromBitDepth(waveFile.bitsPerSample)
             val minBufferSize = AudioTrack.getMinBufferSize(waveFile.sampleRate, channelMask, audioFormat)
             
             if (minBufferSize == AudioTrack.ERROR_BAD_VALUE) {
@@ -198,8 +198,8 @@ class AudioPlayer(private val context: Context) {
 
             // Create AudioAttributes using configuration parameters
             val audioAttributes = AudioAttributes.Builder()
-                .setUsage(AudioConstants.getUsageValue(currentConfig.usage))
-                .setContentType(AudioConstants.getContentTypeValue(currentConfig.contentType))
+                .setUsage(AudioConstants.getUsage(currentConfig.usage))
+                .setContentType(AudioConstants.getContentType(currentConfig.contentType))
                 .build()
 
             audioTrack = AudioTrack.Builder()
@@ -212,8 +212,8 @@ class AudioPlayer(private val context: Context) {
                         .build()
                 )
                 .setBufferSizeInBytes(bufferSize)
-                .setTransferMode(AudioConstants.getTransferModeValue(currentConfig.transferMode))
-                .setPerformanceMode(AudioConstants.getPerformanceModeValue(currentConfig.performanceMode))
+                .setTransferMode(AudioConstants.getTransferMode(currentConfig.transferMode))
+                .setPerformanceMode(AudioConstants.getPerformanceMode(currentConfig.performanceMode))
                 .build()
 
             if (audioTrack?.state != AudioTrack.STATE_INITIALIZED) {
@@ -289,8 +289,8 @@ class AudioPlayer(private val context: Context) {
 
         // Create AudioAttributes using configuration parameters
         val audioAttributes = AudioAttributes.Builder()
-            .setUsage(AudioConstants.getUsageValue(currentConfig.usage))
-            .setContentType(AudioConstants.getContentTypeValue(currentConfig.contentType))
+            .setUsage(AudioConstants.getUsage(currentConfig.usage))
+            .setContentType(AudioConstants.getContentType(currentConfig.contentType))
             .build()
 
         val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
@@ -328,7 +328,7 @@ class AudioPlayer(private val context: Context) {
             // Use a write buffer that's a fraction of the AudioTrack's internal buffer
             // This ensures smooth playback without underruns
             val audioTrackBufferSize = audioTrack.bufferSizeInFrames * waveFile.channelCount * (waveFile.bitsPerSample / 8)
-            val writeBufferSize = when (AudioConstants.getPerformanceModeValue(currentConfig.performanceMode)) {
+            val writeBufferSize = when (AudioConstants.getPerformanceMode(currentConfig.performanceMode)) {
                 AudioTrack.PERFORMANCE_MODE_LOW_LATENCY -> audioTrackBufferSize / 4  // Smaller chunks for low latency
                 AudioTrack.PERFORMANCE_MODE_POWER_SAVING -> audioTrackBufferSize / 2  // Larger chunks for power saving
                 else -> audioTrackBufferSize / 3  // Default: 1/3 of AudioTrack buffer

@@ -111,25 +111,25 @@ object AudioConstants {
     /**
      * Get usage integer value from string
      */
-    fun getUsageValue(usage: String): Int =
+    fun getUsage(usage: String): Int =
         parseEnumValue(Usage.MAP, usage, AudioAttributes.USAGE_MEDIA, "Usage")
     
     /**
      * Get content type integer value from string
      */
-    fun getContentTypeValue(contentType: String): Int =
+    fun getContentType(contentType: String): Int =
         parseEnumValue(ContentType.MAP, contentType, AudioAttributes.CONTENT_TYPE_MUSIC, "ContentType")
     
     /**
      * Get transfer mode integer value from string
      */
-    fun getTransferModeValue(transferMode: String): Int =
+    fun getTransferMode(transferMode: String): Int =
         parseEnumValue(TransferMode.MAP, transferMode, AudioTrack.MODE_STREAM, "TransferMode")
     
     /**
      * Get performance mode integer value from string
      */
-    fun getPerformanceModeValue(performanceMode: String): Int =
+    fun getPerformanceMode(performanceMode: String): Int =
         parseEnumValue(PerformanceMode.MAP, performanceMode, AudioTrack.PERFORMANCE_MODE_POWER_SAVING, "PerformanceMode")
     
     /**
@@ -167,7 +167,7 @@ object AudioConstants {
     /**
      * Get audio format from bit depth, supporting multiple bit depths
      */
-    fun getAudioFormat(bitsPerSample: Int): Int {
+    fun getFormatFromBitDepth(bitsPerSample: Int): Int {
         val audioFormats = mapOf(
             8 to AudioFormat.ENCODING_PCM_8BIT,
             16 to AudioFormat.ENCODING_PCM_16BIT,
