@@ -1,9 +1,8 @@
 package com.example.audioplayer.config
 
 import android.content.Context
-import android.media.AudioAttributes
-import android.media.AudioTrack
 import android.util.Log
+import com.example.audioplayer.common.AudioConstants
 import org.json.JSONObject
 import java.io.File
 
@@ -12,99 +11,34 @@ import java.io.File
  * Includes configuration management functionality, supports loading configuration from external JSON files
  */
 data class AudioConfig(
-    val usage: Int = AudioAttributes.USAGE_MEDIA,
-    val contentType: Int = AudioAttributes.CONTENT_TYPE_MUSIC,
-    val transferMode: Int = AudioTrack.MODE_STREAM,
-    val performanceMode: Int = AudioTrack.PERFORMANCE_MODE_POWER_SAVING,
-    val bufferMultiplier: Int = 4,
-    val audioFilePath: String = "/data/48k_2ch_16bit.wav",
+    val usage: String = "USAGE_MEDIA",
+    val contentType: String = "CONTENT_TYPE_MUSIC", 
+    val transferMode: String = "MODE_STREAM",
+    val performanceMode: String = "PERFORMANCE_MODE_POWER_SAVING",
+    val bufferMultiplier: Int = 2,
+    val audioFilePath: String = AudioConstants.DEFAULT_AUDIO_FILE,
     val description: String = "Default configuration (power saving mode)"
 ) {
-    /**
-     * Get detailed configuration information
-     */
-    fun getDetailedInfo(): String {
-        return buildString {
-            appendLine("Configuration: $description")
-            appendLine("Usage: ${getUsageString(usage)}")
-            appendLine("Content Type: ${getContentTypeString(contentType)}")
-            appendLine("Transfer Mode: ${getTransferModeString(transferMode)}")
-            appendLine("Performance Mode: ${getPerformanceModeString(performanceMode)}")
-            appendLine("Buffer Multiplier: ${bufferMultiplier}x")
-            appendLine("Audio File: $audioFilePath")
-        }.trim()
-    }
-    
-    private fun getUsageString(usage: Int): String = USAGE_MAP[usage] ?: "UNKNOWN($usage)"
-    private fun getContentTypeString(contentType: Int): String = CONTENT_TYPE_MAP[contentType] ?: "UNKNOWN($contentType)"
-    private fun getTransferModeString(transferMode: Int): String = TRANSFER_MODE_MAP[transferMode] ?: "UNKNOWN($transferMode)"
-    private fun getPerformanceModeString(performanceMode: Int): String = PERFORMANCE_MODE_MAP[performanceMode] ?: "UNKNOWN($performanceMode)"
-
     companion object {
         private const val TAG = "AudioConfig"
-        private const val CONFIG_FILE_PATH = "/data/audio_player_configs.json"
-        private const val ASSETS_CONFIG_FILE = "audio_player_configs.json"
-
-        // Constant mapping tables to avoid repetitive when expressions
-        private val USAGE_MAP = mapOf(
-            AudioAttributes.USAGE_UNKNOWN to "USAGE_UNKNOWN",
-            AudioAttributes.USAGE_MEDIA to "USAGE_MEDIA",
-            AudioAttributes.USAGE_VOICE_COMMUNICATION to "USAGE_VOICE_COMMUNICATION",
-            AudioAttributes.USAGE_VOICE_COMMUNICATION_SIGNALLING to "USAGE_VOICE_COMMUNICATION_SIGNALLING",
-            AudioAttributes.USAGE_ALARM to "USAGE_ALARM",
-            AudioAttributes.USAGE_NOTIFICATION to "USAGE_NOTIFICATION",
-            AudioAttributes.USAGE_NOTIFICATION_RINGTONE to "USAGE_NOTIFICATION_RINGTONE",
-            AudioAttributes.USAGE_NOTIFICATION_EVENT to "USAGE_NOTIFICATION_EVENT",
-            AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY to "USAGE_ASSISTANCE_ACCESSIBILITY",
-            AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE to "USAGE_ASSISTANCE_NAVIGATION_GUIDANCE",
-            AudioAttributes.USAGE_ASSISTANCE_SONIFICATION to "USAGE_ASSISTANCE_SONIFICATION",
-            AudioAttributes.USAGE_GAME to "USAGE_GAME",
-            AudioAttributes.USAGE_ASSISTANT to "USAGE_ASSISTANT",
-            // Android Automotive OS (AAOS) special usage values
-            1000 to "USAGE_EMERGENCY",
-            1001 to "USAGE_SAFETY",
-            1002 to "USAGE_VEHICLE_STATUS",
-            1003 to "USAGE_ANNOUNCEMENT",
-            1004 to "USAGE_SPEAKER_CLEANUP"
-        )
-
-        private val CONTENT_TYPE_MAP = mapOf(
-            AudioAttributes.CONTENT_TYPE_UNKNOWN to "CONTENT_TYPE_UNKNOWN",
-            AudioAttributes.CONTENT_TYPE_MUSIC to "CONTENT_TYPE_MUSIC",
-            AudioAttributes.CONTENT_TYPE_MOVIE to "CONTENT_TYPE_MOVIE",
-            AudioAttributes.CONTENT_TYPE_SPEECH to "CONTENT_TYPE_SPEECH",
-            AudioAttributes.CONTENT_TYPE_SONIFICATION to "CONTENT_TYPE_SONIFICATION"
-        )
-
-        private val TRANSFER_MODE_MAP = mapOf(
-            AudioTrack.MODE_STREAM to "MODE_STREAM",
-            AudioTrack.MODE_STATIC to "MODE_STATIC"
-        )
-
-        private val PERFORMANCE_MODE_MAP = mapOf(
-            AudioTrack.PERFORMANCE_MODE_LOW_LATENCY to "PERFORMANCE_MODE_LOW_LATENCY",
-            AudioTrack.PERFORMANCE_MODE_POWER_SAVING to "PERFORMANCE_MODE_POWER_SAVING",
-            AudioTrack.PERFORMANCE_MODE_NONE to "PERFORMANCE_MODE_NONE"
-        )
 
         /**
          * Load configurations from external file or assets
          */
         fun loadConfigs(context: Context): List<AudioConfig> {
             return try {
-                // First try to load from external file
-                val externalConfigs = loadFromExternalFile()
-                if (externalConfigs.isNotEmpty()) {
-                    Log.i(TAG, "Loaded ${externalConfigs.size} configurations from external file")
-                    externalConfigs
+                val externalFile = File(AudioConstants.CONFIG_FILE_PATH)
+                val jsonString = if (externalFile.exists()) {
+                    Log.i(TAG, "Loading configuration from external file")
+                    externalFile.readText()
                 } else {
-                    // If external file doesn't exist or is empty, load from assets
-                    Log.i(TAG, "External config file not found, loading default configuration from assets")
-                    loadFromAssets(context)
+                    Log.i(TAG, "Loading configuration from assets")
+                    context.assets.open(AudioConstants.ASSETS_CONFIG_FILE).bufferedReader().use { it.readText() }
                 }
+                parseConfigs(jsonString)
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to load configurations, using empty configuration list", e)
-                emptyList()
+                Log.e(TAG, "Failed to load configurations", e)
+                getDefaultConfigs()
             }
         }
 
@@ -116,95 +50,35 @@ data class AudioConfig(
             return loadConfigs(context)
         }
 
-        /**
-         * Load configuration from external JSON file
-         */
-        private fun loadFromExternalFile(): List<AudioConfig> {
-            val file = File(CONFIG_FILE_PATH)
-            return if (file.exists()) {
-                try {
-                    val content = file.readText(Charsets.UTF_8)
-                    parseJsonConfigs(content)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to read external configuration file", e)
-                    emptyList()
-                }
-            } else emptyList()
-        }
-
-        /**
-         * Load default configuration from assets folder
-         */
-        private fun loadFromAssets(context: Context): List<AudioConfig> {
-            return try {
-                val content = context.assets.open(ASSETS_CONFIG_FILE).use {
-                    it.readBytes().toString(Charsets.UTF_8)
-                }
-                parseJsonConfigs(content)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to load configuration from assets", e)
-                emptyList()
+        private fun parseConfigs(jsonString: String): List<AudioConfig> {
+            val configsArray = JSONObject(jsonString).getJSONArray("configs")
+            return (0 until configsArray.length()).map { i ->
+                val config = configsArray.getJSONObject(i)
+                AudioConfig(
+                    usage = config.optString("usage", "USAGE_MEDIA"),
+                    contentType = config.optString("contentType", "CONTENT_TYPE_MUSIC"),
+                    transferMode = config.optString("transferMode", "MODE_STREAM"),
+                    performanceMode = config.optString("performanceMode", "PERFORMANCE_MODE_POWER_SAVING"),
+                    bufferMultiplier = config.optInt("bufferMultiplier", 2),
+                    audioFilePath = config.optString("audioFilePath", AudioConstants.DEFAULT_AUDIO_FILE),
+                    description = config.optString("description", "Custom configuration")
+                )
             }
         }
 
-        /**
-         * Parse JSON configuration
-         */
-        private fun parseJsonConfigs(jsonContent: String): List<AudioConfig> {
-            val configs = mutableListOf<AudioConfig>()
-
-            try {
-                val jsonObject = JSONObject(jsonContent)
-                val configsArray = jsonObject.getJSONArray("configs")
-
-                for (i in 0 until configsArray.length()) {
-                    val configJson = configsArray.getJSONObject(i)
-                    val config = parseAudioConfig(configJson)
-                    configs.add(config)
-                }
-
-                Log.i(TAG, "Successfully parsed ${configs.size} configurations")
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to parse JSON configuration", e)
-            }
-
-            return configs
-        }
-
-        /**
-         * Parse single audio configuration
-         */
-        private fun parseAudioConfig(json: JSONObject): AudioConfig {
-            return AudioConfig(
-                usage = parseUsage(json.optString("usage", "MEDIA")),
-                contentType = parseContentType(json.optString("contentType", "MUSIC")),
-                transferMode = parseTransferMode(json.optString("transferMode", "STREAM")),
-                performanceMode = parsePerformanceMode(json.optString("performanceMode", "POWER_SAVING")),
-                bufferMultiplier = json.optInt("bufferMultiplier", 4),
-                audioFilePath = json.optString("audioFilePath", "/data/48k_2ch_16bit.wav"),
-                description = json.optString("description", "Custom configuration")
+        private fun getDefaultConfigs(): List<AudioConfig> {
+            Log.w(TAG, "Using hardcoded emergency configuration")
+            return listOf(
+                AudioConfig(
+                    usage = "USAGE_MEDIA",
+                    contentType = "CONTENT_TYPE_MUSIC",
+                    transferMode = "MODE_STREAM",
+                    performanceMode = "PERFORMANCE_MODE_POWER_SAVING",
+                    bufferMultiplier = 2,
+                    audioFilePath = AudioConstants.DEFAULT_AUDIO_FILE,
+                    description = "Emergency Fallback - Media Playback"
+                )
             )
-        }
-
-        // Parsing methods - direct string matching with improved error handling
-        private fun parseUsage(usage: String): Int = 
-            parseEnumValue(USAGE_MAP, usage, AudioAttributes.USAGE_MEDIA, "Usage")
-
-        private fun parseContentType(contentType: String): Int = 
-            parseEnumValue(CONTENT_TYPE_MAP, contentType, AudioAttributes.CONTENT_TYPE_MUSIC, "ContentType")
-
-        private fun parseTransferMode(transferMode: String): Int = 
-            parseEnumValue(TRANSFER_MODE_MAP, transferMode, AudioTrack.MODE_STREAM, "TransferMode")
-
-        private fun parsePerformanceMode(performanceMode: String): Int = 
-            parseEnumValue(PERFORMANCE_MODE_MAP, performanceMode, AudioTrack.PERFORMANCE_MODE_POWER_SAVING, "PerformanceMode")
-
-        private fun parseEnumValue(map: Map<Int, String>, value: String, default: Int, typeName: String = ""): Int {
-            val result = map.entries.find { it.value == value.uppercase() }?.key ?: default
-            if (result == default && value.isNotEmpty()) {
-                Log.w(TAG, "Unknown $typeName value: $value, using default")
-            }
-            return result
         }
     }
 }

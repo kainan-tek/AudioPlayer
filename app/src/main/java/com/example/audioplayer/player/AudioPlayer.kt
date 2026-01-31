@@ -7,6 +7,7 @@ import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
 import android.util.Log
+import com.example.audioplayer.common.AudioConstants
 import com.example.audioplayer.config.AudioConfig
 import com.example.audioplayer.model.WaveFile
 import kotlinx.coroutines.CoroutineScope
@@ -62,8 +63,6 @@ class AudioPlayer(private val context: Context) {
     fun setPlaybackListener(listener: PlaybackListener) {
         this.listener = listener
     }
-    
-
 
     /**
      * Set audio configuration
@@ -75,7 +74,7 @@ class AudioPlayer(private val context: Context) {
         }
         currentConfig = config
         Log.i(TAG, "Audio configuration updated: ${config.description}")
-        Log.d(TAG, config.getDetailedInfo())
+        Log.d(TAG, getDetailedInfo())
     }
 
     /**
@@ -184,8 +183,8 @@ class AudioPlayer(private val context: Context) {
             }
 
             // Create AudioTrack
-            val channelMask = getChannelMask(waveFile.channelCount)
-            val audioFormat = getAudioFormat(waveFile.bitsPerSample)
+            val channelMask = AudioConstants.getChannelMask(waveFile.channelCount)
+            val audioFormat = AudioConstants.getAudioFormat(waveFile.bitsPerSample)
             val minBufferSize = AudioTrack.getMinBufferSize(waveFile.sampleRate, channelMask, audioFormat)
             
             if (minBufferSize == AudioTrack.ERROR_BAD_VALUE) {
@@ -199,8 +198,8 @@ class AudioPlayer(private val context: Context) {
 
             // Create AudioAttributes using configuration parameters
             val audioAttributes = AudioAttributes.Builder()
-                .setUsage(currentConfig.usage)
-                .setContentType(currentConfig.contentType)
+                .setUsage(AudioConstants.getUsageValue(currentConfig.usage))
+                .setContentType(AudioConstants.getContentTypeValue(currentConfig.contentType))
                 .build()
 
             audioTrack = AudioTrack.Builder()
@@ -213,8 +212,8 @@ class AudioPlayer(private val context: Context) {
                         .build()
                 )
                 .setBufferSizeInBytes(bufferSize)
-                .setTransferMode(currentConfig.transferMode)
-                .setPerformanceMode(currentConfig.performanceMode)
+                .setTransferMode(AudioConstants.getTransferModeValue(currentConfig.transferMode))
+                .setPerformanceMode(AudioConstants.getPerformanceModeValue(currentConfig.performanceMode))
                 .build()
 
             if (audioTrack?.state != AudioTrack.STATE_INITIALIZED) {
@@ -290,8 +289,8 @@ class AudioPlayer(private val context: Context) {
 
         // Create AudioAttributes using configuration parameters
         val audioAttributes = AudioAttributes.Builder()
-            .setUsage(currentConfig.usage)
-            .setContentType(currentConfig.contentType)
+            .setUsage(AudioConstants.getUsageValue(currentConfig.usage))
+            .setContentType(AudioConstants.getContentTypeValue(currentConfig.contentType))
             .build()
 
         val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
@@ -329,7 +328,7 @@ class AudioPlayer(private val context: Context) {
             // Use a write buffer that's a fraction of the AudioTrack's internal buffer
             // This ensures smooth playback without underruns
             val audioTrackBufferSize = audioTrack.bufferSizeInFrames * waveFile.channelCount * (waveFile.bitsPerSample / 8)
-            val writeBufferSize = when (currentConfig.performanceMode) {
+            val writeBufferSize = when (AudioConstants.getPerformanceModeValue(currentConfig.performanceMode)) {
                 AudioTrack.PERFORMANCE_MODE_LOW_LATENCY -> audioTrackBufferSize / 4  // Smaller chunks for low latency
                 AudioTrack.PERFORMANCE_MODE_POWER_SAVING -> audioTrackBufferSize / 2  // Larger chunks for power saving
                 else -> audioTrackBufferSize / 3  // Default: 1/3 of AudioTrack buffer
@@ -415,40 +414,17 @@ class AudioPlayer(private val context: Context) {
     }
 
     /**
-     * Get channel mask, supporting multi-channel audio including 7.1.4 (12 channels)
+     * Get detailed configuration information
      */
-    private fun getChannelMask(channelCount: Int): Int {
-        val channelMasks = mapOf(
-            1 to AudioFormat.CHANNEL_OUT_MONO,
-            2 to AudioFormat.CHANNEL_OUT_STEREO,
-            4 to AudioFormat.CHANNEL_OUT_QUAD,
-            6 to AudioFormat.CHANNEL_OUT_5POINT1,
-            8 to AudioFormat.CHANNEL_OUT_7POINT1_SURROUND,
-            10 to AudioFormat.CHANNEL_OUT_5POINT1POINT4,
-            12 to AudioFormat.CHANNEL_OUT_7POINT1POINT4,
-            16 to AudioFormat.CHANNEL_OUT_9POINT1POINT6
-        )
-        
-        return channelMasks[channelCount] ?: run {
-            Log.w(TAG, "Unsupported channel count: $channelCount, using stereo playback")
-            AudioFormat.CHANNEL_OUT_STEREO
-        }
-    }
-
-    /**
-     * Get audio format, supporting multiple bit depths
-     */
-    private fun getAudioFormat(bitsPerSample: Int): Int {
-        val audioFormats = mapOf(
-            8 to AudioFormat.ENCODING_PCM_8BIT,
-            16 to AudioFormat.ENCODING_PCM_16BIT,
-            24 to AudioFormat.ENCODING_PCM_24BIT_PACKED,
-            32 to AudioFormat.ENCODING_PCM_32BIT
-        )
-        
-        return audioFormats[bitsPerSample] ?: run {
-            Log.w(TAG, "Unsupported bit depth: $bitsPerSample, using 16-bit")
-            AudioFormat.ENCODING_PCM_16BIT
-        }
+    fun getDetailedInfo(): String {
+        return buildString {
+            appendLine("Configuration: ${currentConfig.description}")
+            appendLine("Usage: ${currentConfig.usage}")
+            appendLine("Content Type: ${currentConfig.contentType}")
+            appendLine("Transfer Mode: ${currentConfig.transferMode}")
+            appendLine("Performance Mode: ${currentConfig.performanceMode}")
+            appendLine("Buffer Multiplier: ${currentConfig.bufferMultiplier}x")
+            appendLine("Audio File: ${currentConfig.audioFilePath}")
+        }.trim()
     }
 }

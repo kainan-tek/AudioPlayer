@@ -13,12 +13,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
-import com.example.audioplayer.config.AudioConfig
 import com.example.audioplayer.player.PlayerState
-import com.example.audioplayer.utils.contentTypeToString
-import com.example.audioplayer.utils.performanceModeToString
-import com.example.audioplayer.utils.transferModeToString
-import com.example.audioplayer.utils.usageToString
 import com.example.audioplayer.viewmodel.PlayerViewModel
 
 /**
@@ -108,7 +103,7 @@ class MainActivity : AppCompatActivity() {
         viewModel.currentConfig.observe(this) { config ->
             config?.let {
                 configButton.text = getString(R.string.audio_config_format, it.description)
-                updatePlaybackInfo(it)
+                updatePlaybackInfo()
             }
         }
     }
@@ -291,18 +286,13 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("SetTextI18n")
     private fun updatePlaybackInfo() {
         viewModel.currentConfig.value?.let { config ->
-            updatePlaybackInfo(config)
+            val configInfo = "Current Config: ${config.description}\n" +
+                    "Usage: ${config.usage} | ${config.contentType}\n" +
+                    "Mode: ${config.performanceMode} | ${config.transferMode}\n" +
+                    "File: ${config.audioFilePath}"
+            fileInfoText.text = configInfo
         } ?: run {
-            fileInfoText.text = "Playback information"
+            fileInfoText.text = "Configuration Info"
         }
-    }
-    
-    @SuppressLint("SetTextI18n")
-    private fun updatePlaybackInfo(config: AudioConfig) {
-        val configInfo = "Current configuration: ${config.description}\n" +
-                "Usage: ${config.usage.usageToString()} | ${config.contentType.contentTypeToString()}\n" +
-                "Mode: ${config.performanceMode.performanceModeToString()} | ${config.transferMode.transferModeToString()}\n" +
-                "File: ${config.audioFilePath}"
-        fileInfoText.text = configInfo
     }
 }
