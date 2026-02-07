@@ -80,12 +80,12 @@ class AudioPlayer(private val context: Context) {
     /**
      * Start audio playback
      */
-    fun play(): Boolean {
+    fun startPlayback(): Boolean {
         Log.d(TAG, "Starting playback")
         
         if (isPlaying.get()) {
             Log.i(TAG, "Already playing, stopping current playback first")
-            stop()
+            stopPlayback()
         }
 
         return try {
@@ -118,7 +118,7 @@ class AudioPlayer(private val context: Context) {
     /**
      * Stop playback
      */
-    fun stop() {
+    fun stopPlayback() {
         Log.d(TAG, "Stopping playback")
         
         if (!isPlaying.get()) {
@@ -138,7 +138,7 @@ class AudioPlayer(private val context: Context) {
      */
     fun release() {
         Log.d(TAG, "Releasing player resources")
-        stop()
+        stopPlayback()
         listener = null  // Clear listener reference to prevent memory leaks
         try {
             playbackScope.cancel()
@@ -282,7 +282,7 @@ class AudioPlayer(private val context: Context) {
         val focusChangeListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
             when (focusChange) {
                 AudioManager.AUDIOFOCUS_GAIN -> audioTrack?.setVolume(1.0f)
-                AudioManager.AUDIOFOCUS_LOSS, AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> stop()
+                AudioManager.AUDIOFOCUS_LOSS, AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> stopPlayback()
                 AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> audioTrack?.setVolume(0.3f)
             }
         }
@@ -370,7 +370,7 @@ class AudioPlayer(private val context: Context) {
                     val elapsed = (System.currentTimeMillis() - startTime) / 1000.0
                     val mbTotal = totalBytes / (1024.0 * 1024.0)
                     Log.i(TAG, "Playback completed: ${String.format(java.util.Locale.US, "%.1f", mbTotal)}MB, total time: ${String.format(java.util.Locale.US, "%.1f", elapsed)}s")
-                    stop()
+                    stopPlayback()
                 }
             } catch (e: Exception) {
                 if (isPlaying.get()) {

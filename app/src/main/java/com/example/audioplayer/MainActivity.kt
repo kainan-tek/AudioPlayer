@@ -6,7 +6,11 @@ import android.app.AlertDialog
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
+import android.view.View
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -16,46 +20,17 @@ import androidx.lifecycle.ViewModelProvider
 import com.example.audioplayer.player.PlayerState
 import com.example.audioplayer.viewmodel.PlayerViewModel
 
-/**
- * Concise audio player main interface
- * Supports loading audio configurations from external JSON files for convenient testing of different scenarios
- * 
- * Usage instructions:
- * 1. adb root && adb remount && adb shell setenforce 0
- * 2. adb push 48k_2ch_16bit.wav /data/
- * 3. adb push 96k_8ch_24bit.wav /data/  (optional, for high-quality audio testing)
- * 4. adb push 48k_12ch_16bit.wav /data/ (optional, for multi-channel testing)
- * 5. (optional) adb push audio_player_configs.json /data/ (custom configuration file)
- * 6. Install and run the application
- * 7. If /data/audio_player_configs.json exists, the app will use external configuration; otherwise use built-in configuration
- * 8. In the app, click the "Configuration" button to select different audio configurations for testing
- * 
- * System requirements: Android 13 (API 33+)
- * 
- * JSON configuration file format:
- * {
- *   "configs": [
- *     {
- *       "usage": "MEDIA",
- *       "contentType": "MUSIC", 
- *       "transferMode": "STREAM",
- *       "performanceMode": "LOW_LATENCY",
- *       "bufferMultiplier": 2,
- *       "audioFilePath": "/data/your_audio_file.wav",
- *       "minBufferSize": 480,
- *       "description": "Custom configuration name"
- *     }
- *   ]
- * }
- */
+
 class MainActivity : AppCompatActivity() {
     
     private lateinit var viewModel: PlayerViewModel
     private lateinit var playButton: Button
     private lateinit var stopButton: Button
-    private lateinit var configButton: Button
+    private lateinit var configSpinner: Spinner
     private lateinit var statusText: TextView
     private lateinit var fileInfoText: TextView
+    
+    private var isSpinnerInitialized = false
 
     companion object {
         private const val TAG = "MainActivity"
@@ -75,7 +50,7 @@ class MainActivity : AppCompatActivity() {
     private fun initViews() {
         playButton = findViewById(R.id.playButton)
         stopButton = findViewById(R.id.stopButton)
-        configButton = findViewById(R.id.configButton)
+        configSpinner = findViewById(R.id.configSpinner)
         statusText = findViewById(R.id.statusTextView)
         fileInfoText = findViewById(R.id.playbackInfoTextView)
     }
@@ -102,8 +77,12 @@ class MainActivity : AppCompatActivity() {
         // Observe current configuration
         viewModel.currentConfig.observe(this) { config ->
             config?.let {
-                configButton.text = getString(R.string.audio_config_format, it.description)
                 updatePlaybackInfo()
+                updateSpinnerSelection(it.description)
+                // Initialize spinner when config is first loaded
+                if (configSpinner.adapter == null) {
+                    setupConfigSpinner()
+                }
             }
         }
     }
@@ -114,15 +93,79 @@ class MainActivity : AppCompatActivity() {
                 requestAudioPermission()
                 return@setOnClickListener
             }
-            viewModel.play()
+            viewModel.startPlayback()
         }
         
         stopButton.setOnClickListener {
-            viewModel.stop()
+            viewModel.stopPlayback()
+        }
+    }
+    
+    /**
+     * Setup configuration spinner
+     */
+    private fun setupConfigSpinner() {
+        val configs = viewModel.getAllAudioConfigs()
+        Log.d(TAG, "Setting up config spinner with ${configs.size} configurations")
+        
+        if (configs.isEmpty()) {
+            Log.w(TAG, "No configurations available for spinner")
+            return
         }
         
-        configButton.setOnClickListener {
-            showConfigSelectionDialog()
+        val configNames = configs.map { it.description }
+        Log.d(TAG, "Config names: $configNames")
+        
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, configNames)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        configSpinner.adapter = adapter
+        
+        // Set initial selection
+        val currentConfig = viewModel.currentConfig.value
+        currentConfig?.let {
+            val index = configs.indexOfFirst { config -> config.description == it.description }
+            if (index >= 0) {
+                configSpinner.setSelection(index)
+                Log.d(TAG, "Set initial spinner selection to index $index: ${it.description}")
+            }
+        }
+        
+        configSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                if (!isSpinnerInitialized) {
+                    isSpinnerInitialized = true
+                    Log.d(TAG, "Spinner initialized, skipping first selection")
+                    return
+                }
+                
+                val selectedConfig = configs[position]
+                Log.d(TAG, "Config selected: ${selectedConfig.description}")
+                viewModel.setAudioConfig(selectedConfig)
+                showToast("Switched to: ${selectedConfig.description}")
+            }
+            
+            override fun onNothingSelected(parent: AdapterView<*>?) {
+                Log.d(TAG, "Nothing selected in spinner")
+            }
+        }
+        
+        // Add long press listener to reload configurations
+        configSpinner.setOnLongClickListener {
+            Log.d(TAG, "Long press detected on spinner")
+            reloadConfigurations()
+            true
+        }
+    }
+    
+    /**
+     * Update spinner selection based on config description
+     */
+    private fun updateSpinnerSelection(description: String) {
+        val configs = viewModel.getAllAudioConfigs()
+        val index = configs.indexOfFirst { it.description == description }
+        if (index >= 0 && index != configSpinner.selectedItemPosition) {
+            isSpinnerInitialized = false
+            configSpinner.setSelection(index)
         }
     }
 
@@ -134,17 +177,17 @@ class MainActivity : AppCompatActivity() {
             PlayerState.IDLE -> {
                 playButton.isEnabled = true
                 stopButton.isEnabled = false
-                configButton.isEnabled = true
+                configSpinner.isEnabled = true
             }
             PlayerState.PLAYING -> {
                 playButton.isEnabled = false
                 stopButton.isEnabled = true
-                configButton.isEnabled = false  // Disable configuration changes during playback
+                configSpinner.isEnabled = false  // Disable configuration changes during playback
             }
             PlayerState.ERROR -> {
                 playButton.isEnabled = true
                 stopButton.isEnabled = false
-                configButton.isEnabled = true
+                configSpinner.isEnabled = true
             }
         }
     }
@@ -152,59 +195,26 @@ class MainActivity : AppCompatActivity() {
     /**
      * Handle audio playback errors
      */
+    @SuppressLint("SetTextI18n")
     private fun handleError(error: String) {
         Log.e(TAG, "Audio playback error: $error")
         showToast("Playback error: $error")
+        statusText.text = "Error: $error"
         
         // Reset playback state
-        resetPlayerState()
-    }
-    
-    /**
-     * Reset player state
-     */
-    private fun resetPlayerState() {
-        updateButtonStates(PlayerState.IDLE)
-        statusText.text = getString(R.string.status_ready)
+        updateButtonStates(PlayerState.ERROR)
     }
 
-    /**
-     * Show configuration selection dialog
-     */
-    private fun showConfigSelectionDialog() {
-        val configs = viewModel.getAllAudioConfigs()
-        if (configs.isEmpty()) {
-            showToast("No available configurations")
-            return
-        }
-        
-        val configNames = configs.map { it.description }.toMutableList()
-        configNames.add("🔄 Reload configuration file")
-        
-        AlertDialog.Builder(this)
-            .setTitle("Select Audio Configuration (${configs.size} configurations)")
-            .setItems(configNames.toTypedArray()) { _, which ->
-                if (which == configs.size) {
-                    // Reload configurations
-                    reloadConfigurations()
-                } else {
-                    // Select configuration
-                    val selectedConfig = configs[which]
-                    viewModel.setAudioConfig(selectedConfig)
-                    showToast("Switched to: ${selectedConfig.description}")
-                }
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-    
     /**
      * Reload configuration file
      */
     private fun reloadConfigurations() {
         try {
             viewModel.reloadConfigurations()
-            showToast("Reloading configuration file...")
+            showToast("Configuration reloaded successfully")
+            // Refresh spinner after reload
+            isSpinnerInitialized = false
+            setupConfigSpinner()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to reload configurations", e)
             showToast("Configuration reload failed: ${e.message}")
@@ -263,7 +273,7 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         try {
-            viewModel.stop()
+            viewModel.stopPlayback()
             Log.d(TAG, "AudioPlayer resources released successfully")
         } catch (e: Exception) {
             Log.e(TAG, "Error releasing AudioPlayer resources", e)
@@ -274,7 +284,7 @@ class MainActivity : AppCompatActivity() {
         super.onPause()
         // Pause playback when app goes to background
         if (viewModel.playerState.value == PlayerState.PLAYING) {
-            viewModel.stop()
+            viewModel.stopPlayback()
             Log.d(TAG, "Playback paused due to app going to background")
         }
     }

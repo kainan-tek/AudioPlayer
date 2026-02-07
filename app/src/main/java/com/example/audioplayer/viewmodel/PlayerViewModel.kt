@@ -38,7 +38,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     init {
         setupAudioPlayerListener()
         loadConfigurations()
-        _statusMessage.value = getApplication<Application>().getString(R.string.status_ready)
+        _statusMessage.value = getString(R.string.status_ready)
     }
 
     /**
@@ -100,17 +100,33 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun play() {
-        _statusMessage.value = getApplication<Application>().getString(R.string.status_preparing)
+    fun startPlayback() {
+        if (_playerState.value == PlayerState.PLAYING) return
+        
+        updateUI({
+            _statusMessage.value = getString(R.string.status_preparing)
+        })
         
         viewModelScope.launch(Dispatchers.IO) {
-            audioPlayer.play()
+            val success = audioPlayer.startPlayback()
+            if (!success) {
+                // If startPlayback returns false, error should already be reported via listener
+                // But ensure UI is in correct state
+                updateUI({
+                    if (_playerState.value != PlayerState.ERROR) {
+                        _playerState.value = PlayerState.ERROR
+                        _statusMessage.value = getString(R.string.error_playback_failed)
+                    }
+                }, clearError = false)
+            }
         }
     }
 
-    fun stop() {
-        _statusMessage.value = getApplication<Application>().getString(R.string.status_stopping)
-        audioPlayer.stop()
+    fun stopPlayback() {
+        if (_playerState.value != PlayerState.PLAYING) return
+        
+        _statusMessage.value = getString(R.string.status_stopping)
+        audioPlayer.stopPlayback()
     }
     
     /**
@@ -127,9 +143,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     /**
      * Get all available audio configurations
      */
-    fun getAllAudioConfigs(): List<AudioConfig> {
-        return _availableConfigs.value ?: emptyList()
-    }
+    fun getAllAudioConfigs(): List<AudioConfig> = _availableConfigs.value ?: emptyList()
 
     override fun onCleared() {
         super.onCleared()
@@ -141,23 +155,23 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             override fun onPlaybackStarted() {
                 updateUI({
                     _playerState.value = PlayerState.PLAYING
-                    _statusMessage.value = getApplication<Application>().getString(R.string.status_playing)
+                    _statusMessage.value = getString(R.string.status_playing)
                 })
             }
 
             override fun onPlaybackStopped() {
                 updateUI({
                     _playerState.value = PlayerState.IDLE
-                    _statusMessage.value = getApplication<Application>().getString(R.string.status_stopped)
+                    _statusMessage.value = getString(R.string.status_stopped)
                 })
             }
 
             override fun onPlaybackError(error: String) {
                 updateUI({
                     _playerState.value = PlayerState.ERROR
-                    _statusMessage.value = getApplication<Application>().getString(R.string.error_playback_failed)
+                    _statusMessage.value = getString(R.string.error_playback_failed)
                     _errorMessage.value = error
-                })
+                }, clearError = false)
             }
         })
     }
@@ -173,4 +187,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             }
         }
     }
+
+    private fun getString(resId: Int): String = getApplication<Application>().getString(resId)
 }
