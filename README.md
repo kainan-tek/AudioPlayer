@@ -375,9 +375,9 @@ adb shell ls -la /data/*.wav
 
 ## 🔗 相关项目
 
-- **AudioRecorder**: 配套的音频录制应用，基于AudioRecord API
-- **AAudioPlayer**: 基于AAudio API的高性能播放器（独立项目）
-- **AAudioRecorder**: 基于AAudio API的录音器（独立项目）
+- [**AudioRecorder**](https://github.com/kainan-tek/AudioRecorder) - 配套的音频录制应用，基于AudioRecord API
+- [**AAudioPlayer**](https://github.com/kainan-tek/AAudioPlayer) - 基于AAudio API的高性能播放器（独立项目）
+- [**AAudioRecorder**](https://github.com/kainan-tek/AAudioRecorder) - 基于AAudio API的录音器（独立项目）
 
 ## 📄 许可证
 

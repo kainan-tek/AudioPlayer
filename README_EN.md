@@ -376,9 +376,9 @@ adb shell ls -la /data/*.wav
 
 ## 🔗 Related Projects
 
-- **AudioRecorder**: Companion audio recording app based on AudioRecord API
-- **AAudioPlayer**: High-performance player based on AAudio API (standalone project)
-- **AAudioRecorder**: Recorder based on AAudio API (standalone project)
+- [**AudioRecorder**](https://github.com/kainan-tek/AudioRecorder) - Companion audio recording app based on AudioRecord API
+- [**AAudioPlayer**](https://github.com/kainan-tek/AAudioPlayer) - High-performance player based on AAudio API (standalone project)
+- [**AAudioRecorder**](https://github.com/kainan-tek/AAudioRecorder) - Recorder based on AAudio API (standalone project)
 
 ## 📄 License
 
