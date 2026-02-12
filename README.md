@@ -1,5 +1,7 @@
 # AudioPlayer
 
+中文 | [English](README_EN.md)
+
 一个基于Android AudioTrack API的专业音频播放器测试程序，支持17种音频使用场景配置和多格式WAV文件播放。
 
 ## 📋 项目概述
