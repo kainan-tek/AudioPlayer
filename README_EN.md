@@ -64,9 +64,9 @@ AudioPlayer is an audio playback test tool designed for the Android platform, us
 ### Basic Operations
 
 1. **Playback Control**
-   - 🎵 **Start Playback**: Tap the green play button
-   - ⏹️ **Stop Playback**: Tap the red stop button
-   - ⚙️ **Playback Config**: Tap config button to switch audio settings
+   - 🎵 **Start Playback**: Tap the green "Start Playback" button
+   - ⏹️ **Stop Playback**: Tap the red "Stop Playback" button
+   - ⚙️ **Playback Config**: Switch audio settings via config dropdown menu
 
 2. **Configuration Management**
    - Auto-load configurations on app startup
@@ -76,7 +76,7 @@ AudioPlayer is an audio playback test tool designed for the Android platform, us
 
 ### Configuration Switching Flow
 
-1. Tap config dropdown to view all available configurations
+1. Tap config dropdown menu to view all available configurations
 2. Select desired audio scenario configuration
 3. Configuration takes effect immediately and displays on interface
 4. Start playback to test audio effect
@@ -215,7 +215,7 @@ The app includes 17 preset configurations covering the following usage scenarios
 - **UI**: Material Design 3
 - **Concurrency**: Kotlin Coroutines
 - **Minimum Version**: Android 12 (API 32)
-- **Target Version**: Android 15 (API 36)
+- **Target Version**: Not specified (uses compileSdk)
 - **Compile Version**: Android 15 (API 36)
 
 ### Dependencies
@@ -228,6 +228,9 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.10.0")
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.10.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+    testImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.test.ext:junit:1.3.0")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
 }
 ```
 
@@ -270,10 +273,10 @@ WAV File → WaveFile Parser → AudioTrack → Audio Output Device
 ```kotlin
 class AudioPlayer(context: Context) {
     fun setAudioConfig(config: AudioConfig)              // Set configuration
-    fun play(): Boolean                                  // Start playback
-    fun stop(): Boolean                                  // Stop playback
+    fun startPlayback(): Boolean                         // Start playback
+    fun stopPlayback()                                   // Stop playback
     fun release()                                        // Release resources
-    fun setPlaybackListener(listener: PlaybackListener?) // Set listener
+    fun setPlaybackListener(listener: PlaybackListener)  // Set listener
 }
 ```
 
@@ -285,8 +288,8 @@ class PlayerViewModel : ViewModel() {
     val errorMessage: LiveData<String?>                  // Error message
     val currentConfig: LiveData<AudioConfig?>            // Current config
     
-    fun play()                                           // Start playback
-    fun stop()                                           // Stop playback
+    fun startPlayback()                                  // Start playback
+    fun stopPlayback()                                   // Stop playback
     fun setAudioConfig(config: AudioConfig)              // Set configuration
     fun getAllAudioConfigs(): List<AudioConfig>          // Get all configs
     fun reloadConfigurations()                           // Reload configurations

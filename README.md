@@ -64,9 +64,9 @@ AudioPlayer是一个专为Android平台设计的音频播放测试工具，使�
 ### 基本操作
 
 1. **播放控制**
-   - 🎵 **开始播放**: 点击绿色播放按钮
-   - ⏹️ **停止播放**: 点击红色停止按钮
-   - ⚙️ **播放配置**: 点击配置按钮切换音频设置
+   - 🎵 **开始播放**: 点击绿色"Start Playback"按钮
+   - ⏹️ **停止播放**: 点击红色"Stop Playback"按钮
+   - ⚙️ **播放配置**: 通过配置下拉菜单切换音频设置
 
 2. **配置管理**
    - 应用启动时自动加载配置
@@ -214,7 +214,7 @@ AudioPlayer是一个专为Android平台设计的音频播放测试工具，使�
 - **UI**: Material Design 3
 - **并发**: Kotlin Coroutines
 - **最低版本**: Android 12 (API 32)
-- **目标版本**: Android 15 (API 36)
+- **目标版本**: 未指定 (使用 compileSdk)
 - **编译版本**: Android 15 (API 36)
 
 ### 依赖库
@@ -227,6 +227,9 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.10.0")
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.10.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+    testImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.test.ext:junit:1.3.0")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
 }
 ```
 
@@ -269,10 +272,10 @@ WAV文件 → WaveFile解析器 → AudioTrack → 音频输出设备
 ```kotlin
 class AudioPlayer(context: Context) {
     fun setAudioConfig(config: AudioConfig)              // 设置配置
-    fun play(): Boolean                                  // 开始播放
-    fun stop(): Boolean                                  // 停止播放
+    fun startPlayback(): Boolean                         // 开始播放
+    fun stopPlayback()                                   // 停止播放
     fun release()                                        // 释放资源
-    fun setPlaybackListener(listener: PlaybackListener?) // 设置监听器
+    fun setPlaybackListener(listener: PlaybackListener)  // 设置监听器
 }
 ```
 
@@ -284,8 +287,8 @@ class PlayerViewModel : ViewModel() {
     val errorMessage: LiveData<String?>                  // 错误消息
     val currentConfig: LiveData<AudioConfig?>            // 当前配置
     
-    fun play()                                           // 开始播放
-    fun stop()                                           // 停止播放
+    fun startPlayback()                                  // 开始播放
+    fun stopPlayback()                                   // 停止播放
     fun setAudioConfig(config: AudioConfig)              // 设置配置
     fun getAllAudioConfigs(): List<AudioConfig>          // 获取所有配置
     fun reloadConfigurations()                           // 重新加载配置
