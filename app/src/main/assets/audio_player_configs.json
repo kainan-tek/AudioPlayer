@@ -113,7 +113,7 @@
       "contentType": "CONTENT_TYPE_SONIFICATION",
       "transferMode": "MODE_STREAM",
       "performanceMode": "PERFORMANCE_MODE_LOW_LATENCY",
-      "bufferMultiplier": 1,
+      "bufferMultiplier": 2,
       "audioFilePath": "/data/48k_2ch_16bit.wav",
       "description": "Emergency Alert (Low Latency)"
     },
@@ -122,7 +122,7 @@
       "contentType": "CONTENT_TYPE_SONIFICATION",
       "transferMode": "MODE_STREAM",
       "performanceMode": "PERFORMANCE_MODE_LOW_LATENCY",
-      "bufferMultiplier": 1,
+      "bufferMultiplier": 2,
       "audioFilePath": "/data/48k_2ch_16bit.wav",
       "description": "Safety Warning (Low Latency)"
     },

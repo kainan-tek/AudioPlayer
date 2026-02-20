@@ -103,6 +103,12 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun startPlayback() {
         if (_playerState.value == PlayerState.PLAYING) return
         
+        // Reset error state before starting new playback
+        _errorMessage.value = null
+        if (_playerState.value == PlayerState.ERROR) {
+            _playerState.value = PlayerState.IDLE
+        }
+        
         updateUI({
             _statusMessage.value = getString(R.string.status_preparing)
         })
@@ -144,6 +150,17 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
      * Get all available audio configurations
      */
     fun getAllAudioConfigs(): List<AudioConfig> = _availableConfigs.value ?: emptyList()
+    
+    /**
+     * Clear error state and reset to idle
+     */
+    fun clearError() {
+        _errorMessage.value = null
+        if (_playerState.value == PlayerState.ERROR) {
+            _playerState.value = PlayerState.IDLE
+            _statusMessage.value = getString(R.string.status_ready)
+        }
+    }
 
     override fun onCleared() {
         super.onCleared()

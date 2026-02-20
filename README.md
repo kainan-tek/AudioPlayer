@@ -28,8 +28,8 @@ AudioPlayer是一个专为Android平台设计的音频播放测试工具，使�
 
 ### 权限要求
 
-- `READ_MEDIA_AUDIO` (API 33+): 读取音频文件
-- `READ_EXTERNAL_STORAGE` (API ≤32): 读取外部存储
+- `READ_MEDIA_AUDIO`: 读取音频文件权限 (Android 13+)
+- `READ_EXTERNAL_STORAGE`: 读取外部存储权限 (Android 12及以下)
 
 ### 安装步骤
 

@@ -107,10 +107,10 @@ class AudioPlayer(private val context: Context) {
             Log.i(TAG, "Playback started successfully")
             true
         } catch (e: SecurityException) {
-            handleError("Permission denied: ${e.message}")
+            handleError("[PERMISSION] Permission denied: ${e.message}")
             false
         } catch (e: Exception) {
-            handleError("Playback initialization failed: ${e.message}")
+            handleError("[STREAM] Playback initialization failed: ${e.message}")
             false
         }
     }
@@ -154,7 +154,7 @@ class AudioPlayer(private val context: Context) {
         waveFile = WaveFile(currentConfig.audioFilePath)
         
         if (!waveFile!!.open() || !waveFile!!.isValid()) {
-            handleError("Cannot open audio file: ${currentConfig.audioFilePath}")
+            handleError("[FILE] Cannot open audio file: ${currentConfig.audioFilePath}")
             return false
         }
         
@@ -172,7 +172,7 @@ class AudioPlayer(private val context: Context) {
         try {
             // Request audio focus
             if (!requestAudioFocus()) {
-                handleError("Cannot obtain audio focus")
+                handleError("[STREAM] Cannot obtain audio focus")
                 return false
             }
 
@@ -189,7 +189,7 @@ class AudioPlayer(private val context: Context) {
             
             if (minBufferSize == AudioTrack.ERROR_BAD_VALUE) {
                 abandonAudioFocus()  // Release focus on parameter error
-                handleError("Unsupported audio parameter combination: ${waveFile.sampleRate}Hz, ${waveFile.channelCount}ch, ${waveFile.bitsPerSample}bit")
+                handleError("[PARAM] Unsupported audio parameter combination: ${waveFile.sampleRate}Hz, ${waveFile.channelCount}ch, ${waveFile.bitsPerSample}bit")
                 return false
             }
             
@@ -218,7 +218,7 @@ class AudioPlayer(private val context: Context) {
 
             if (audioTrack?.state != AudioTrack.STATE_INITIALIZED) {
                 abandonAudioFocus()  // Release focus on initialization failure
-                handleError("AudioTrack initialization failed, state: ${audioTrack?.state}")
+                handleError("[STREAM] AudioTrack initialization failed, state: ${audioTrack?.state}")
                 return false
             }
 
@@ -237,7 +237,7 @@ class AudioPlayer(private val context: Context) {
             return true
         } catch (e: Exception) {
             abandonAudioFocus()  // Release focus on exception
-            handleError("AudioTrack creation failed: ${e.message}")
+            handleError("[STREAM] AudioTrack creation failed: ${e.message}")
             return false
         }
     }
@@ -248,13 +248,13 @@ class AudioPlayer(private val context: Context) {
     private fun validateAudioParameters(waveFile: WaveFile): Boolean {
         // Check sample rate
         if (waveFile.sampleRate !in 8000..192000) {
-            handleError("Unsupported sample rate: ${waveFile.sampleRate}Hz (supported range: 8000-192000Hz)")
+            handleError("[PARAM] Unsupported sample rate: ${waveFile.sampleRate}Hz (supported range: 8000-192000Hz)")
             return false
         }
         
         // Check channel count - extended to 12 channel support
         if (waveFile.channelCount !in 1..16) {
-            handleError("Unsupported channel count: ${waveFile.channelCount} (supported range: 1-16 channels)")
+            handleError("[PARAM] Unsupported channel count: ${waveFile.channelCount} (supported range: 1-16 channels)")
             return false
         }
         
@@ -265,7 +265,7 @@ class AudioPlayer(private val context: Context) {
         
         // Check bit depth
         if (waveFile.bitsPerSample !in listOf(8, 16, 24, 32)) {
-            handleError("Unsupported bit depth: ${waveFile.bitsPerSample}bit (supported: 8/16/24/32bit)")
+            handleError("[PARAM] Unsupported bit depth: ${waveFile.bitsPerSample}bit (supported: 8/16/24/32bit)")
             return false
         }
         
@@ -279,12 +279,11 @@ class AudioPlayer(private val context: Context) {
     private fun requestAudioFocus(): Boolean {
         audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         
+        // Determine appropriate focus type based on usage scenario
+        val focusType = determineFocusType()
+        
         val focusChangeListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
-            when (focusChange) {
-                AudioManager.AUDIOFOCUS_GAIN -> audioTrack?.setVolume(1.0f)
-                AudioManager.AUDIOFOCUS_LOSS, AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> stopPlayback()
-                AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> audioTrack?.setVolume(0.3f)
-            }
+            handleFocusChange(focusChange)
         }
 
         // Create AudioAttributes using configuration parameters
@@ -293,9 +292,11 @@ class AudioPlayer(private val context: Context) {
             .setContentType(AudioConstants.getContentType(currentConfig.contentType))
             .build()
 
-        val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+        val request = AudioFocusRequest.Builder(focusType)
             .setAudioAttributes(audioAttributes)
             .setOnAudioFocusChangeListener(focusChangeListener)
+            .setWillPauseWhenDucked(false)
+            .setAcceptsDelayedFocusGain(true)
             .build()
 
         val result = audioManager?.requestAudioFocus(request) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
@@ -305,6 +306,65 @@ class AudioPlayer(private val context: Context) {
         }
         
         return result
+    }
+    
+    /**
+     * Determine appropriate focus type based on usage scenario
+     */
+    private fun determineFocusType(): Int {
+        return when {
+            currentConfig.usage.contains("EMERGENCY") || 
+            currentConfig.usage.contains("SAFETY") -> AudioManager.AUDIOFOCUS_GAIN_TRANSIENT
+            
+            currentConfig.usage.contains("NAVIGATION") ||
+            currentConfig.usage.contains("ANNOUNCEMENT") -> AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK
+            
+            currentConfig.usage.contains("VOICE_COMMUNICATION") -> AudioManager.AUDIOFOCUS_GAIN_TRANSIENT
+            
+            else -> AudioManager.AUDIOFOCUS_GAIN
+        }
+    }
+    
+    /**
+     * Handle audio focus changes with proper recovery
+     */
+    private fun handleFocusChange(focusChange: Int) {
+        when (focusChange) {
+            AudioManager.AUDIOFOCUS_GAIN -> {
+                Log.d(TAG, "Audio focus gained, restoring playback")
+                audioTrack?.setVolume(1.0f)
+                // Resume playback if it was paused due to transient focus loss
+                if (isPlaying.get() && audioTrack?.playState != AudioTrack.PLAYSTATE_PLAYING) {
+                    audioTrack?.play()
+                }
+            }
+            
+            AudioManager.AUDIOFOCUS_GAIN_TRANSIENT -> {
+                Log.d(TAG, "Audio focus gained transiently")
+                audioTrack?.setVolume(1.0f)
+            }
+            
+            AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK -> {
+                Log.d(TAG, "Audio focus gained with ducking allowed")
+                audioTrack?.setVolume(1.0f)
+            }
+            
+            AudioManager.AUDIOFOCUS_LOSS -> {
+                Log.d(TAG, "Audio focus lost, stopping playback")
+                stopPlayback()
+            }
+            
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+                Log.d(TAG, "Audio focus lost transiently, pausing playback")
+                // Pause playback instead of stopping for transient focus loss
+                audioTrack?.pause()
+            }
+            
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
+                Log.d(TAG, "Audio focus lost with ducking, reducing volume")
+                audioTrack?.setVolume(0.3f)
+            }
+        }
     }
 
     /**
@@ -374,7 +434,7 @@ class AudioPlayer(private val context: Context) {
                 }
             } catch (e: Exception) {
                 if (isPlaying.get()) {
-                    handleError("Playback error: ${e.message}")
+                    handleError("[STREAM] Playback error: ${e.message}")
                 }
             }
         }

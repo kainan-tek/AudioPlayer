@@ -123,7 +123,11 @@ class WaveFile(private val filePath: String) {
             Log.i(TAG, "WAV file opened successfully: ${sampleRate}Hz, $channelDescription, ${bitsPerSample}bit, duration ${String.format(java.util.Locale.US, "%.2f", duration)}s")
             return true
             
-        } catch (e: Exception) {
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Permission denied when opening file: $filePath")
+            close()
+            return false
+        } catch (e: IOException) {
             Log.e(TAG, "Failed to open file: $filePath", e)
             close()
             return false
@@ -162,7 +166,7 @@ class WaveFile(private val filePath: String) {
             try {
                 fileInputStream?.close()
             } catch (e: IOException) {
-                Log.w(TAG, "Error closing file", e)
+                Log.w(TAG, "Error closing file")
             } finally {
                 fileInputStream = null
                 isFileOpen = false

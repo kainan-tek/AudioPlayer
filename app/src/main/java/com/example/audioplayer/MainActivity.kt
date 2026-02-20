@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -193,16 +194,56 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Handle audio playback errors
+     * Handle audio playback errors with user-friendly messages
      */
     @SuppressLint("SetTextI18n")
     private fun handleError(error: String) {
         Log.e(TAG, "Audio playback error: $error")
-        showToast("Playback error: $error")
-        statusText.text = "Error: $error"
+        
+        // Convert technical error to user-friendly message
+        val userMessage = getUserFriendlyErrorMessage(error)
+        
+        // Show user-friendly dialog
+        AlertDialog.Builder(this)
+            .setTitle("Playback Error")
+            .setMessage(userMessage)
+            .setPositiveButton("OK") { dialog, _ ->
+                dialog.dismiss()
+                // Clear error state when user dismisses the dialog
+                viewModel.clearError()
+            }
+            .setCancelable(true)
+            .setOnCancelListener {
+                // Also clear error state when dialog is canceled
+                viewModel.clearError()
+            }
+            .show()
+        
+        statusText.text = "Error: $userMessage"
         
         // Reset playback state
         updateButtonStates(PlayerState.ERROR)
+    }
+    
+    /**
+     * Convert technical error message to user-friendly message
+     */
+    private fun getUserFriendlyErrorMessage(error: String): String {
+        return when {
+            error.startsWith("[FILE]", ignoreCase = true) -> 
+                "Unable to open audio file. The file may be corrupted or inaccessible."
+            
+            error.startsWith("[STREAM]", ignoreCase = true) -> 
+                "Audio system initialization failed. Please try again."
+            
+            error.startsWith("[PERMISSION]", ignoreCase = true) -> 
+                "Audio file access permission is required. Please grant the permission in Settings."
+            
+            error.startsWith("[PARAM]", ignoreCase = true) -> 
+                "Invalid audio configuration. Please select a different configuration."
+            
+            else -> "Playback failed. Please try again."
+        }
     }
 
     /**
@@ -221,35 +262,49 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun hasAudioPermission(): Boolean {
-        return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            // Android 13 (API 33) and above use READ_MEDIA_AUDIO
-            ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_AUDIO) == PackageManager.PERMISSION_GRANTED
-        } else {
-            // Android 12 (API 32) and below use READ_EXTERNAL_STORAGE
-            ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+    /**
+     * Get required permissions based on Android version
+     */
+    private fun getRequiredPermissions(): Array<String> {
+        return when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> {
+                arrayOf(Manifest.permission.READ_MEDIA_AUDIO)
+            }
+            else -> {
+                arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+            }
         }
     }
 
+    /**
+     * Check if all required permissions are granted
+     */
+    private fun hasAudioPermission(): Boolean {
+        return getRequiredPermissions().all {
+            ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    /**
+     * Request required permissions
+     */
     private fun requestAudioPermission() {
-        val permission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            Manifest.permission.READ_MEDIA_AUDIO
-        } else {
-            Manifest.permission.READ_EXTERNAL_STORAGE
+        val permissions = getRequiredPermissions()
+        val deniedPermissions = permissions.filter {
+            ActivityCompat.shouldShowRequestPermissionRationale(this, it)
         }
         
-        if (ActivityCompat.shouldShowRequestPermissionRationale(this, permission)) {
-            // Show explanation dialog
+        if (deniedPermissions.isNotEmpty()) {
             AlertDialog.Builder(this)
                 .setTitle("Permission Required")
                 .setMessage("This app needs audio file access permission to play audio files.")
                 .setPositiveButton("Grant") { _, _ ->
-                    ActivityCompat.requestPermissions(this, arrayOf(permission), PERMISSION_REQUEST_CODE)
+                    ActivityCompat.requestPermissions(this, permissions, PERMISSION_REQUEST_CODE)
                 }
                 .setNegativeButton("Cancel", null)
                 .show()
         } else {
-            ActivityCompat.requestPermissions(this, arrayOf(permission), PERMISSION_REQUEST_CODE)
+            ActivityCompat.requestPermissions(this, permissions, PERMISSION_REQUEST_CODE)
         }
     }
 
@@ -261,10 +316,12 @@ class MainActivity : AppCompatActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         
         if (requestCode == PERMISSION_REQUEST_CODE && grantResults.isNotEmpty()) {
-            val message = if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            val allGranted = grantResults.all { it == PackageManager.PERMISSION_GRANTED }
+            val message = if (allGranted) {
                 getString(R.string.permission_granted)
             } else {
-                getString(R.string.permission_required)
+                val deniedCount = grantResults.count { it != PackageManager.PERMISSION_GRANTED }
+                "${getString(R.string.permission_required)} ($deniedCount permission(s) denied)"
             }
             showToast(message)
         }
