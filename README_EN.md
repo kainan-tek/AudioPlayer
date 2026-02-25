@@ -156,7 +156,7 @@ The app includes 17 preset configurations covering the following usage scenarios
       "performanceMode": "PERFORMANCE_MODE_POWER_SAVING",
       "bufferMultiplier": 2,
       "audioFilePath": "/data/48k_2ch_16bit.wav",
-      "description": "Media playback configuration"
+      "description": "Media Playback (Power Saving Mode)"
     }
   ]
 }
@@ -324,6 +324,8 @@ data class AudioConfig(
    - Check file path correctness
 
 2. **Permission Issues**
+   - The app will automatically request permissions on first run, follow the on-screen prompts
+   - If permissions are denied, manually grant storage permission in system settings
    ```bash
    adb root && adb remount && adb shell setenforce 0
    ```

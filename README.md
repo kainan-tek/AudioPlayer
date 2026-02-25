@@ -155,7 +155,7 @@ AudioPlayer是一个专为Android平台设计的音频播放测试工具，使�
       "performanceMode": "PERFORMANCE_MODE_POWER_SAVING",
       "bufferMultiplier": 2,
       "audioFilePath": "/data/48k_2ch_16bit.wav",
-      "description": "媒体播放配置"
+      "description": "Media Playback (Power Saving Mode)"
     }
   ]
 }
@@ -323,6 +323,8 @@ data class AudioConfig(
    - 检查文件路径是否正确
 
 2. **权限问题**
+   - 应用首次运行时会自动请求权限，按照屏幕提示授予
+   - 如果权限被拒绝，可在系统设置中手动授予存储权限
    ```bash
    adb root && adb remount && adb shell setenforce 0
    ```
