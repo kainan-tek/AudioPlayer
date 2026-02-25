@@ -29,7 +29,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var stopButton: Button
     private lateinit var configSpinner: Spinner
     private lateinit var statusText: TextView
-    private lateinit var fileInfoText: TextView
+    private lateinit var playbackInfoText: TextView
     
     private var isSpinnerInitialized = false
 
@@ -53,7 +53,7 @@ class MainActivity : AppCompatActivity() {
         stopButton = findViewById(R.id.stopButton)
         configSpinner = findViewById(R.id.configSpinner)
         statusText = findViewById(R.id.statusTextView)
-        fileInfoText = findViewById(R.id.playbackInfoTextView)
+        playbackInfoText = findViewById(R.id.playbackInfoTextView)
     }
 
     private fun initViewModel() {
@@ -357,9 +357,9 @@ class MainActivity : AppCompatActivity() {
                     "Usage: ${config.usage} | ${config.contentType}\n" +
                     "Mode: ${config.performanceMode} | ${config.transferMode}\n" +
                     "File: ${config.audioFilePath}"
-            fileInfoText.text = configInfo
+            playbackInfoText.text = configInfo
         } ?: run {
-            fileInfoText.text = "Configuration Info"
+            playbackInfoText.text = "Configuration Info"
         }
     }
 }
