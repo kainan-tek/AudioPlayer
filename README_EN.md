@@ -205,7 +205,7 @@ The app includes 17 preset configurations covering the following usage scenarios
 - **AudioConfig**: Audio configuration management class with dynamic config loading
 - **PlayerViewModel**: MVVM architecture view model managing playback state
 - **MainActivity**: Modern main interface controller with permission management and user interaction
-- **WaveFile**: WAV file parser supporting various formats and multi-channel
+- **WavFile**: WAV file parser supporting various formats and multi-channel
 
 ### Technology Stack
 
@@ -247,7 +247,7 @@ dependencies {
 ### Data Flow Architecture
 
 ```
-WAV File → WaveFile Parser → AudioTrack → Audio Output Device
+WAV File → WavFile Parser → AudioTrack → Audio Output Device
                                 ↓
                          Kotlin Coroutine → UI State Update
 ```

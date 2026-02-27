@@ -17,22 +17,22 @@ import kotlinx.coroutines.launch
  * Supports loading audio configuration from external JSON files
  */
 class PlayerViewModel(application: Application) : AndroidViewModel(application) {
-    
+
     private val audioPlayer = AudioPlayer(application.applicationContext)
-    
+
     // UI state
     private val _playerState = MutableLiveData(PlayerState.IDLE)
     val playerState: LiveData<PlayerState> = _playerState
-    
+
     private val _statusMessage = MutableLiveData<String>()
     val statusMessage: LiveData<String> = _statusMessage
-    
+
     private val _errorMessage = MutableLiveData<String?>()
     val errorMessage: LiveData<String?> = _errorMessage
-    
+
     private val _currentConfig = MutableLiveData<AudioConfig>()
     val currentConfig: LiveData<AudioConfig> = _currentConfig
-    
+
     private val _availableConfigs = MutableLiveData<List<AudioConfig>>()
 
     init {
@@ -71,7 +71,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             })
             return
         }
-        
+
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val configs = AudioConfig.reloadConfigs(getApplication())
@@ -80,12 +80,14 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                         _availableConfigs.value = configs
                         // If current configuration is not in new configuration list, set first one as default
                         val currentConfigDescription = _currentConfig.value?.description
-                        val newCurrentConfig = configs.find { it.description == currentConfigDescription } 
-                            ?: configs[0]
-                        
+                        val newCurrentConfig =
+                            configs.find { it.description == currentConfigDescription }
+                                ?: configs[0]
+
                         audioPlayer.setAudioConfig(newCurrentConfig)
                         _currentConfig.value = newCurrentConfig
-                        _statusMessage.value = "Configuration reloaded successfully: ${configs.size} configs"
+                        _statusMessage.value =
+                            "Configuration reloaded successfully: ${configs.size} configs"
                     } else {
                         _statusMessage.value = "Configuration file is empty or format error"
                         _errorMessage.value = "No valid audio configuration found"
@@ -102,17 +104,17 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun startPlayback() {
         if (_playerState.value == PlayerState.PLAYING) return
-        
+
         // Reset error state before starting new playback
         _errorMessage.value = null
         if (_playerState.value == PlayerState.ERROR) {
             _playerState.value = PlayerState.IDLE
         }
-        
+
         updateUI({
             _statusMessage.value = getString(R.string.status_preparing)
         })
-        
+
         viewModelScope.launch(Dispatchers.IO) {
             val success = audioPlayer.startPlayback()
             if (!success) {
@@ -130,11 +132,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun stopPlayback() {
         if (_playerState.value != PlayerState.PLAYING) return
-        
+
         _statusMessage.value = getString(R.string.status_stopping)
         audioPlayer.stopPlayback()
     }
-    
+
     /**
      * Set audio configuration
      */
@@ -145,12 +147,12 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             _statusMessage.value = "Configuration updated: ${config.description}"
         })
     }
-    
+
     /**
      * Get all available audio configurations
      */
     fun getAllAudioConfigs(): List<AudioConfig> = _availableConfigs.value ?: emptyList()
-    
+
     /**
      * Clear error state and reset to idle
      */

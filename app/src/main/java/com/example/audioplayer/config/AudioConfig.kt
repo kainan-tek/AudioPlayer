@@ -12,12 +12,12 @@ import java.io.File
  */
 data class AudioConfig(
     val usage: String = "USAGE_MEDIA",
-    val contentType: String = "CONTENT_TYPE_MUSIC", 
+    val contentType: String = "CONTENT_TYPE_MUSIC",
     val transferMode: String = "MODE_STREAM",
     val performanceMode: String = "PERFORMANCE_MODE_POWER_SAVING",
     val bufferMultiplier: Int = 2,
     val audioFilePath: String = AudioConstants.DEFAULT_AUDIO_FILE,
-    val description: String = "Default configuration (power saving mode)"
+    val description: String = "Default configuration (power saving mode)",
 ) {
     companion object {
         private const val TAG = "AudioConfig"
@@ -33,7 +33,8 @@ data class AudioConfig(
                     externalFile.readText()
                 } else {
                     Log.i(TAG, "Loading configuration from assets")
-                    context.assets.open(AudioConstants.ASSETS_CONFIG_FILE).bufferedReader().use { it.readText() }
+                    context.assets.open(AudioConstants.ASSETS_CONFIG_FILE).bufferedReader()
+                        .use { it.readText() }
                 }
                 parseConfigs(jsonString)
             } catch (e: Exception) {
@@ -58,9 +59,13 @@ data class AudioConfig(
                     usage = config.optString("usage", "USAGE_MEDIA"),
                     contentType = config.optString("contentType", "CONTENT_TYPE_MUSIC"),
                     transferMode = config.optString("transferMode", "MODE_STREAM"),
-                    performanceMode = config.optString("performanceMode", "PERFORMANCE_MODE_POWER_SAVING"),
+                    performanceMode = config.optString(
+                        "performanceMode", "PERFORMANCE_MODE_POWER_SAVING"
+                    ),
                     bufferMultiplier = config.optInt("bufferMultiplier", 2),
-                    audioFilePath = config.optString("audioFilePath", AudioConstants.DEFAULT_AUDIO_FILE),
+                    audioFilePath = config.optString(
+                        "audioFilePath", AudioConstants.DEFAULT_AUDIO_FILE
+                    ),
                     description = config.optString("description", "Custom configuration")
                 )
             }

@@ -23,14 +23,14 @@ import com.example.audioplayer.viewmodel.PlayerViewModel
 
 
 class MainActivity : AppCompatActivity() {
-    
+
     private lateinit var viewModel: PlayerViewModel
     private lateinit var playButton: Button
     private lateinit var stopButton: Button
     private lateinit var configSpinner: Spinner
     private lateinit var statusText: TextView
     private lateinit var playbackInfoText: TextView
-    
+
     private var isSpinnerInitialized = false
 
     companion object {
@@ -41,7 +41,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        
+
         initViews()
         initViewModel()
         setupClickListeners()
@@ -58,23 +58,23 @@ class MainActivity : AppCompatActivity() {
 
     private fun initViewModel() {
         viewModel = ViewModelProvider(this)[PlayerViewModel::class.java]
-        
+
         // Observe playback state
         viewModel.playerState.observe(this) { state ->
             updateButtonStates(state)
             updatePlaybackInfo()
         }
-        
+
         // Observe status messages
         viewModel.statusMessage.observe(this) { message ->
             statusText.text = message
         }
-        
+
         // Observe error messages
         viewModel.errorMessage.observe(this) { error ->
             error?.let { handleError(it) }
         }
-        
+
         // Observe current configuration
         viewModel.currentConfig.observe(this) { config ->
             config?.let {
@@ -96,31 +96,31 @@ class MainActivity : AppCompatActivity() {
             }
             viewModel.startPlayback()
         }
-        
+
         stopButton.setOnClickListener {
             viewModel.stopPlayback()
         }
     }
-    
+
     /**
      * Setup configuration spinner
      */
     private fun setupConfigSpinner() {
         val configs = viewModel.getAllAudioConfigs()
         Log.d(TAG, "Setting up config spinner with ${configs.size} configurations")
-        
+
         if (configs.isEmpty()) {
             Log.w(TAG, "No configurations available for spinner")
             return
         }
-        
+
         val configNames = configs.map { it.description }
         Log.d(TAG, "Config names: $configNames")
-        
+
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, configNames)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         configSpinner.adapter = adapter
-        
+
         // Set initial selection
         val currentConfig = viewModel.currentConfig.value
         currentConfig?.let {
@@ -130,26 +130,31 @@ class MainActivity : AppCompatActivity() {
                 Log.d(TAG, "Set initial spinner selection to index $index: ${it.description}")
             }
         }
-        
+
         configSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+            override fun onItemSelected(
+                parent: AdapterView<*>?,
+                view: View?,
+                position: Int,
+                id: Long,
+            ) {
                 if (!isSpinnerInitialized) {
                     isSpinnerInitialized = true
                     Log.d(TAG, "Spinner initialized, skipping first selection")
                     return
                 }
-                
+
                 val selectedConfig = configs[position]
                 Log.d(TAG, "Config selected: ${selectedConfig.description}")
                 viewModel.setAudioConfig(selectedConfig)
                 showToast("Switched to: ${selectedConfig.description}")
             }
-            
+
             override fun onNothingSelected(parent: AdapterView<*>?) {
                 Log.d(TAG, "Nothing selected in spinner")
             }
         }
-        
+
         // Add long press listener to reload configurations
         configSpinner.setOnLongClickListener {
             Log.d(TAG, "Long press detected on spinner")
@@ -157,7 +162,7 @@ class MainActivity : AppCompatActivity() {
             true
         }
     }
-    
+
     /**
      * Update spinner selection based on config description
      */
@@ -180,11 +185,13 @@ class MainActivity : AppCompatActivity() {
                 stopButton.isEnabled = false
                 configSpinner.isEnabled = true
             }
+
             PlayerState.PLAYING -> {
                 playButton.isEnabled = false
                 stopButton.isEnabled = true
                 configSpinner.isEnabled = false  // Disable configuration changes during playback
             }
+
             PlayerState.ERROR -> {
                 playButton.isEnabled = true
                 stopButton.isEnabled = false
@@ -199,49 +206,48 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("SetTextI18n")
     private fun handleError(error: String) {
         Log.e(TAG, "Audio playback error: $error")
-        
+
         // Convert technical error to user-friendly message
         val userMessage = getUserFriendlyErrorMessage(error)
-        
+
         // Show user-friendly dialog
-        AlertDialog.Builder(this)
-            .setTitle("Playback Error")
-            .setMessage(userMessage)
+        AlertDialog.Builder(this).setTitle("Playback Error").setMessage(userMessage)
             .setPositiveButton("OK") { dialog, _ ->
                 dialog.dismiss()
                 // Clear error state when user dismisses the dialog
                 viewModel.clearError()
-            }
-            .setCancelable(true)
-            .setOnCancelListener {
+            }.setCancelable(true).setOnCancelListener {
                 // Also clear error state when dialog is canceled
                 viewModel.clearError()
-            }
-            .show()
-        
+            }.show()
+
         statusText.text = "Error: $userMessage"
-        
+
         // Reset playback state
         updateButtonStates(PlayerState.ERROR)
     }
-    
+
     /**
      * Convert technical error message to user-friendly message
      */
     private fun getUserFriendlyErrorMessage(error: String): String {
         return when {
-            error.startsWith("[FILE]", ignoreCase = true) -> 
-                "Unable to open audio file. The file may be corrupted or inaccessible."
-            
-            error.startsWith("[STREAM]", ignoreCase = true) -> 
-                "Audio system initialization failed. Please try again."
-            
-            error.startsWith("[PERMISSION]", ignoreCase = true) -> 
-                "Audio file access permission is required. Please grant the permission in Settings."
-            
-            error.startsWith("[PARAM]", ignoreCase = true) -> 
-                "Invalid audio configuration. Please select a different configuration."
-            
+            error.startsWith(
+                "[FILE]", ignoreCase = true
+            ) -> "Unable to open audio file. The file may be corrupted or inaccessible."
+
+            error.startsWith(
+                "[STREAM]", ignoreCase = true
+            ) -> "Audio system initialization failed. Please try again."
+
+            error.startsWith(
+                "[PERMISSION]", ignoreCase = true
+            ) -> "Audio file access permission is required. Please grant the permission in Settings."
+
+            error.startsWith(
+                "[PARAM]", ignoreCase = true
+            ) -> "Invalid audio configuration. Please select a different configuration."
+
             else -> "Playback failed. Please try again."
         }
     }
@@ -270,6 +276,7 @@ class MainActivity : AppCompatActivity() {
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> {
                 arrayOf(Manifest.permission.READ_MEDIA_AUDIO)
             }
+
             else -> {
                 arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
             }
@@ -293,16 +300,13 @@ class MainActivity : AppCompatActivity() {
         val deniedPermissions = permissions.filter {
             ActivityCompat.shouldShowRequestPermissionRationale(this, it)
         }
-        
+
         if (deniedPermissions.isNotEmpty()) {
-            AlertDialog.Builder(this)
-                .setTitle("Permission Required")
+            AlertDialog.Builder(this).setTitle("Permission Required")
                 .setMessage("This app needs audio file access permission to play audio files.")
                 .setPositiveButton("Grant") { _, _ ->
                     ActivityCompat.requestPermissions(this, permissions, PERMISSION_REQUEST_CODE)
-                }
-                .setNegativeButton("Cancel", null)
-                .show()
+                }.setNegativeButton("Cancel", null).show()
         } else {
             ActivityCompat.requestPermissions(this, permissions, PERMISSION_REQUEST_CODE)
         }
@@ -311,10 +315,10 @@ class MainActivity : AppCompatActivity() {
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
-        grantResults: IntArray
+        grantResults: IntArray,
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        
+
         if (requestCode == PERMISSION_REQUEST_CODE && grantResults.isNotEmpty()) {
             val allGranted = grantResults.all { it == PackageManager.PERMISSION_GRANTED }
             val message = if (allGranted) {
@@ -336,7 +340,7 @@ class MainActivity : AppCompatActivity() {
             Log.e(TAG, "Error releasing AudioPlayer resources", e)
         }
     }
-    
+
     override fun onPause() {
         super.onPause()
         // Pause playback when app goes to background
@@ -353,10 +357,8 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("SetTextI18n")
     private fun updatePlaybackInfo() {
         viewModel.currentConfig.value?.let { config ->
-            val configInfo = "Current Config: ${config.description}\n" +
-                    "Usage: ${config.usage} | ${config.contentType}\n" +
-                    "Mode: ${config.performanceMode} | ${config.transferMode}\n" +
-                    "File: ${config.audioFilePath}"
+            val configInfo =
+                "Current Config: ${config.description}\n" + "Usage: ${config.usage} | ${config.contentType}\n" + "Mode: ${config.performanceMode} | ${config.transferMode}\n" + "File: ${config.audioFilePath}"
             playbackInfoText.text = configInfo
         } ?: run {
             playbackInfoText.text = "Configuration Info"

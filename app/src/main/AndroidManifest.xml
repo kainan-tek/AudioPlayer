@@ -4,16 +4,19 @@
 
     <!-- Audio file read permission (API 33+) -->
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
-    
+
     <!-- Backward compatible storage permission (API 32 and below) -->
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" 
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
 
     <!-- Audio focus and device control permission -->
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 
     <!-- Declare that the app requires audio output feature -->
-    <uses-feature android:name="android.hardware.audio.output" android:required="true" />
+    <uses-feature
+        android:name="android.hardware.audio.output"
+        android:required="true" />
 
     <application
         android:allowBackup="true"

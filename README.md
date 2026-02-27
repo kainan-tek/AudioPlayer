@@ -204,7 +204,7 @@ AudioPlayer是一个专为Android平台设计的音频播放测试工具，使�
 - **AudioConfig**: 音频配置管理类，支持动态加载配置
 - **PlayerViewModel**: MVVM架构的视图模型，管理播放状态
 - **MainActivity**: 现代化主界面控制器，提供权限管理和用户交互
-- **WaveFile**: WAV文件解析器，支持多种格式和多声道
+- **WavFile**: WAV文件解析器，支持多种格式和多声道
 
 ### 技术栈
 
@@ -246,7 +246,7 @@ dependencies {
 ### 数据流架构
 
 ```
-WAV文件 → WaveFile解析器 → AudioTrack → 音频输出设备
+WAV文件 → WavFile解析器 → AudioTrack → 音频输出设备
                                 ↓
                            Kotlin协程 → UI状态更新
 ```
