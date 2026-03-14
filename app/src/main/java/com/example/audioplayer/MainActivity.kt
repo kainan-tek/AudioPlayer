@@ -15,13 +15,22 @@ import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
 import com.example.audioplayer.player.PlayerState
 import com.example.audioplayer.viewmodel.PlayerViewModel
 
 
+/**
+ * Audio Player Main Activity
+ *
+ * Usage Instructions:
+ * 1. Grant storage permissions
+ * 2. Select playback configuration from dropdown
+ * 3. Start playback
+ *
+ * System Requirements: Android 12L (API 32+)
+ */
 class MainActivity : AppCompatActivity() {
 
     private lateinit var viewModel: PlayerViewModel
@@ -83,6 +92,9 @@ class MainActivity : AppCompatActivity() {
                 // Initialize spinner when config is first loaded
                 if (configSpinner.adapter == null) {
                     setupConfigSpinner()
+                    Log.i(
+                        TAG, "Loaded ${viewModel.getAllAudioConfigs().size} playback configurations"
+                    )
                 }
             }
         }
@@ -107,15 +119,13 @@ class MainActivity : AppCompatActivity() {
      */
     private fun setupConfigSpinner() {
         val configs = viewModel.getAllAudioConfigs()
-        Log.d(TAG, "Setting up config spinner with ${configs.size} configurations")
 
         if (configs.isEmpty()) {
-            Log.w(TAG, "No configurations available for spinner")
+            Log.w(TAG, "No configurations available")
             return
         }
 
         val configNames = configs.map { it.description }
-        Log.d(TAG, "Config names: $configNames")
 
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, configNames)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
@@ -127,7 +137,6 @@ class MainActivity : AppCompatActivity() {
             val index = configs.indexOfFirst { config -> config.description == it.description }
             if (index >= 0) {
                 configSpinner.setSelection(index)
-                Log.d(TAG, "Set initial spinner selection to index $index: ${it.description}")
             }
         }
 
@@ -140,24 +149,20 @@ class MainActivity : AppCompatActivity() {
             ) {
                 if (!isSpinnerInitialized) {
                     isSpinnerInitialized = true
-                    Log.d(TAG, "Spinner initialized, skipping first selection")
                     return
                 }
 
                 val selectedConfig = configs[position]
-                Log.d(TAG, "Config selected: ${selectedConfig.description}")
                 viewModel.setAudioConfig(selectedConfig)
                 showToast("Switched to: ${selectedConfig.description}")
             }
 
             override fun onNothingSelected(parent: AdapterView<*>?) {
-                Log.d(TAG, "Nothing selected in spinner")
             }
         }
 
         // Add long press listener to reload configurations
         configSpinner.setOnLongClickListener {
-            Log.d(TAG, "Long press detected on spinner")
             reloadConfigurations()
             true
         }
@@ -248,6 +253,10 @@ class MainActivity : AppCompatActivity() {
                 "[PARAM]", ignoreCase = true
             ) -> "Invalid audio configuration. Please select a different configuration."
 
+            error.startsWith(
+                "[FOCUS]", ignoreCase = true
+            ) -> "Unable to play audio. Another app may be using the audio system."
+
             else -> "Playback failed. Please try again."
         }
     }
@@ -255,6 +264,7 @@ class MainActivity : AppCompatActivity() {
     /**
      * Reload configuration file
      */
+    @SuppressLint("SetTextI18n")
     private fun reloadConfigurations() {
         try {
             viewModel.reloadConfigurations()
@@ -296,20 +306,7 @@ class MainActivity : AppCompatActivity() {
      * Request required permissions
      */
     private fun requestAudioPermission() {
-        val permissions = getRequiredPermissions()
-        val deniedPermissions = permissions.filter {
-            ActivityCompat.shouldShowRequestPermissionRationale(this, it)
-        }
-
-        if (deniedPermissions.isNotEmpty()) {
-            AlertDialog.Builder(this).setTitle("Permission Required")
-                .setMessage("This app needs audio file access permission to play audio files.")
-                .setPositiveButton("Grant") { _, _ ->
-                    ActivityCompat.requestPermissions(this, permissions, PERMISSION_REQUEST_CODE)
-                }.setNegativeButton("Cancel", null).show()
-        } else {
-            ActivityCompat.requestPermissions(this, permissions, PERMISSION_REQUEST_CODE)
-        }
+        requestPermissions(getRequiredPermissions(), PERMISSION_REQUEST_CODE)
     }
 
     override fun onRequestPermissionsResult(
@@ -322,36 +319,13 @@ class MainActivity : AppCompatActivity() {
         if (requestCode == PERMISSION_REQUEST_CODE && grantResults.isNotEmpty()) {
             val allGranted = grantResults.all { it == PackageManager.PERMISSION_GRANTED }
             val message = if (allGranted) {
-                getString(R.string.permission_granted)
+                "Permission granted"
             } else {
                 val deniedCount = grantResults.count { it != PackageManager.PERMISSION_GRANTED }
-                "${getString(R.string.permission_required)} ($deniedCount permission(s) denied)"
+                "Storage permission required ($deniedCount permission(s) denied)"
             }
             showToast(message)
         }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        try {
-            viewModel.stopPlayback()
-            Log.d(TAG, "AudioPlayer resources released successfully")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error releasing AudioPlayer resources", e)
-        }
-    }
-
-    override fun onPause() {
-        super.onPause()
-        // Pause playback when app goes to background
-        if (viewModel.playerState.value == PlayerState.PLAYING) {
-            viewModel.stopPlayback()
-            Log.d(TAG, "Playback paused due to app going to background")
-        }
-    }
-
-    private fun showToast(message: String) {
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 
     @SuppressLint("SetTextI18n")
@@ -361,7 +335,30 @@ class MainActivity : AppCompatActivity() {
                 "Current Config: ${config.description}\n" + "Usage: ${config.usage} | ${config.contentType}\n" + "Mode: ${config.performanceMode} | ${config.transferMode}\n" + "File: ${config.audioFilePath}"
             playbackInfoText.text = configInfo
         } ?: run {
-            playbackInfoText.text = "Configuration Info"
+            playbackInfoText.text = "Playback Info"
+        }
+    }
+
+    private fun showToast(message: String) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        try {
+            viewModel.release()
+            Log.d(TAG, "AudioPlayer resources released successfully")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error releasing AudioPlayer resources", e)
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // Stop playback when app goes to background
+        if (viewModel.isPlaying()) {
+            viewModel.stopPlayback()
+            Log.d(TAG, "Playback paused due to app going to background")
         }
     }
 }

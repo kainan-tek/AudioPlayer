@@ -28,4 +28,3 @@ dependencyResolutionManagement {
 
 rootProject.name = "AudioPlayer"
 include(":app")
- 

@@ -7,8 +7,7 @@ import org.json.JSONObject
 import java.io.File
 
 /**
- * Audio configuration data class
- * Includes configuration management functionality, supports loading configuration from external JSON files
+ * Audio playback configuration data class
  */
 data class AudioConfig(
     val usage: String = "USAGE_MEDIA",
@@ -17,14 +16,20 @@ data class AudioConfig(
     val performanceMode: String = "PERFORMANCE_MODE_POWER_SAVING",
     val bufferMultiplier: Int = 2,
     val audioFilePath: String = AudioConstants.DEFAULT_AUDIO_FILE,
-    val description: String = "Default configuration (power saving mode)",
+    val description: String = "Default Configuration",
 ) {
+    init {
+        require(bufferMultiplier > 0) {
+            "Buffer multiplier must be positive: $bufferMultiplier"
+        }
+        require(audioFilePath.isNotBlank()) {
+            "Audio file path cannot be blank"
+        }
+    }
+
     companion object {
         private const val TAG = "AudioConfig"
 
-        /**
-         * Load configurations from external file or assets
-         */
         fun loadConfigs(context: Context): List<AudioConfig> {
             return try {
                 val externalFile = File(AudioConstants.CONFIG_FILE_PATH)
@@ -43,9 +48,6 @@ data class AudioConfig(
             }
         }
 
-        /**
-         * Reload configurations (used after configuration file updates)
-         */
         fun reloadConfigs(context: Context): List<AudioConfig> {
             Log.i(TAG, "Reloading configuration file")
             return loadConfigs(context)

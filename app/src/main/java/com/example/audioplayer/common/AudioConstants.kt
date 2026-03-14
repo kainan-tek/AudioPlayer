@@ -5,18 +5,29 @@ import android.media.AudioFormat
 import android.media.AudioTrack
 
 /**
- * Unified audio constants definition
- * For constants and utility class management in AudioPlayer project
+ * Common audio constants and utilities
  */
 object AudioConstants {
 
-    // ============ File Paths ============
+    // Configuration file paths
     const val CONFIG_FILE_PATH = "/data/audio_player_configs.json"
     const val ASSETS_CONFIG_FILE = "audio_player_configs.json"
-
     const val DEFAULT_AUDIO_FILE = "/data/48k_2ch_16bit.wav"
 
-    // ============ AudioTrack Usage Constants ============
+    /**
+     * Error type prefixes for consistent error handling
+     */
+    object ErrorTypes {
+        const val FILE = "[FILE]"
+        const val STREAM = "[STREAM]"
+        const val PERMISSION = "[PERMISSION]"
+        const val PARAM = "[PARAM]"
+        const val FOCUS = "[FOCUS]"
+    }
+
+    /**
+     * AudioTrack usage constants mapping
+     */
     object Usage {
         const val UNKNOWN = AudioAttributes.USAGE_UNKNOWN
         const val MEDIA = AudioAttributes.USAGE_MEDIA
@@ -35,6 +46,7 @@ object AudioConstants {
         const val ASSISTANT = AudioAttributes.USAGE_ASSISTANT
 
         // Android Automotive OS (AAOS) special usage scenarios
+        // Note: These require system signature or special permissions on AAOS devices
         const val EMERGENCY = 1000
         const val SAFETY = 1001
         const val VEHICLE_STATUS = 1002
@@ -64,7 +76,9 @@ object AudioConstants {
         )
     }
 
-    // ============ AudioTrack Content Type Constants ============
+    /**
+     * AudioTrack content type constants mapping
+     */
     object ContentType {
         const val UNKNOWN = AudioAttributes.CONTENT_TYPE_UNKNOWN
         const val MUSIC = AudioAttributes.CONTENT_TYPE_MUSIC
@@ -82,7 +96,9 @@ object AudioConstants {
         )
     }
 
-    // ============ AudioTrack Transfer Mode Constants ============
+    /**
+     * AudioTrack transfer mode constants mapping
+     */
     object TransferMode {
         const val STREAM = AudioTrack.MODE_STREAM
         const val STATIC = AudioTrack.MODE_STATIC
@@ -93,7 +109,9 @@ object AudioConstants {
         )
     }
 
-    // ============ AudioTrack Performance Mode Constants ============
+    /**
+     * AudioTrack performance mode constants mapping
+     */
     object PerformanceMode {
         const val LOW_LATENCY = AudioTrack.PERFORMANCE_MODE_LOW_LATENCY
         const val POWER_SAVING = AudioTrack.PERFORMANCE_MODE_POWER_SAVING
@@ -106,8 +124,6 @@ object AudioConstants {
             NONE to "PERFORMANCE_MODE_NONE"
         )
     }
-
-    // ============ Utility Functions ============
 
     /**
      * Get usage integer value from string
@@ -147,11 +163,17 @@ object AudioConstants {
         default: Int,
         typeName: String = "",
     ): Int {
-        val result = map.entries.find { it.value == value.uppercase() }?.key ?: default
-        if (result == default && value.isNotEmpty()) {
-            android.util.Log.w("AudioConstants", "Unknown $typeName value: $value, using default")
+        val entry = map.entries.find { it.value == value }
+        if (entry != null) {
+            return entry.key
         }
-        return result
+
+        if (value.isNotEmpty()) {
+            android.util.Log.w(
+                "AudioConstants", "Unknown $typeName value: $value, using default: $default"
+            )
+        }
+        return default
     }
 
     /**
@@ -195,4 +217,10 @@ object AudioConstants {
             AudioFormat.ENCODING_PCM_16BIT
         }
     }
+
+    fun isValidSampleRate(rate: Int): Boolean = rate in 8000..192000
+
+    fun isValidChannelCount(count: Int): Boolean = count in 1..16
+
+    fun isValidBitDepth(depth: Int): Boolean = depth in listOf(8, 16, 24, 32)
 }

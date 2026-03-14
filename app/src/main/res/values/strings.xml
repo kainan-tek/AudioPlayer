@@ -1,37 +1,3 @@
 <resources>
     <string name="app_name">AudioPlayer</string>
-    <string name="app_title">Audio Player</string>
-    
-    <!-- Button Labels -->
-    <string name="play">Play</string>
-    <string name="stop">Stop</string>
-    <string name="audio_config">Config: Default Configuration</string>
-    <string name="audio_config_format">Config: %s</string>
-    
-    <!-- Status Messages -->
-    <string name="status_ready">Ready</string>
-    <string name="status_playing">Playing…</string>
-    <string name="status_stopped">Playback Stopped</string>
-    <string name="status_preparing">Preparing to Play…</string>
-    <string name="status_stopping">Stopping…</string>
-    
-    <!-- File Info -->
-    <string name="file_info">Config File: /data/audio_configs.json\nSupported Test Files:\n• /data/48k_2ch_16bit.wav (Default)\n• /data/96k_8ch_24bit.wav (High Quality)\n• /data/48k_12ch_16bit.wav (Multi-channel)\n\nSupports Multi-channel Audio (1-12 channels)\nIncluding 7.1.4 3D Audio</string>
-    
-    <!-- Error Messages -->
-    <string name="error_permission_denied">Audio permission required to play files</string>
-    <string name="error_file_not_found">Audio file not found</string>
-    <string name="error_playback_failed">Playback failed</string>
-    <string name="error_unsupported_format">Unsupported audio format</string>
-    <string name="error_unsupported_channels">Unsupported channel configuration</string>
-    
-    <!-- Permission Messages -->
-    <string name="permission_granted">Permission Granted</string>
-    <string name="permission_required">Storage permission required to play audio files</string>
-    
-    <!-- Audio Format Info -->
-    <string name="supported_formats">Supported Formats:\n• Sample Rate: 8kHz - 192kHz\n• Channels: 1-12 channels (including 7.1.4)\n• Bit Depth: 8/16/24/32bit\n• 3D Audio: 5.1.4, 6.1.4, 7.1.4</string>
-    
-    <!-- Channel Descriptions -->
-    <string name="channel_layout_714">7.1.4 Channel Layout:\nFront: L R C LFE\nSurround: Ls Rs Lrs Rrs\nHeight: Ltf Rtf Ltb Rtb</string>
 </resources>

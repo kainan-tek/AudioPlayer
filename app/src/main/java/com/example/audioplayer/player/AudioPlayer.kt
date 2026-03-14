@@ -16,20 +16,13 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.util.concurrent.atomic.AtomicBoolean
 
-/**
- * Player state enumeration
- */
 enum class PlayerState {
-    IDLE,       // Idle state
-    PLAYING,    // Playing
-    ERROR       // Error state
+    IDLE, PLAYING, ERROR
 }
 
 /**
- * Concise audio player responsible for WAV file playback
- * Supports configurable audio parameters for testing different scenarios
+ * Audio player using AudioTrack API
  */
 class AudioPlayer(private val context: Context) {
 
@@ -37,18 +30,15 @@ class AudioPlayer(private val context: Context) {
         private const val TAG = "AudioPlayer"
     }
 
-    // Playback components
     private var audioTrack: AudioTrack? = null
     private var audioManager: AudioManager? = null
-    private var focusRequest: AudioFocusRequest? = null
+    private var audioFocusRequest: AudioFocusRequest? = null
     private var wavFile: WavFile? = null
 
-    // Playback state - using simple AtomicBoolean, consistent with AudioRecorder
-    private val isPlaying = AtomicBoolean(false)
+    @Volatile
+    private var state = PlayerState.IDLE
     private var playbackJob: Job? = null
     private val playbackScope = CoroutineScope(Dispatchers.IO)
-
-    // Audio configuration
     private var currentConfig: AudioConfig = AudioConfig()
 
     // Playback listener
@@ -60,72 +50,62 @@ class AudioPlayer(private val context: Context) {
 
     private var listener: PlaybackListener? = null
 
-    fun setPlaybackListener(listener: PlaybackListener) {
+    fun setPlaybackListener(listener: PlaybackListener?) {
         this.listener = listener
     }
 
-    /**
-     * Set audio configuration
-     */
     fun setAudioConfig(config: AudioConfig) {
-        if (isPlaying.get()) {
-            Log.w(TAG, "Cannot change configuration while playing, please stop playback first")
+        if (state == PlayerState.PLAYING) {
+            Log.w(TAG, "Cannot change configuration while playing")
             return
         }
         currentConfig = config
-        Log.i(TAG, "Audio configuration updated: ${config.description}")
-        Log.d(TAG, getDetailedInfo())
+        Log.i(TAG, "Configuration updated: ${config.description}")
     }
 
-    /**
-     * Start audio playback
-     */
     fun startPlayback(): Boolean {
         Log.d(TAG, "Starting playback")
 
-        if (isPlaying.get()) {
-            Log.i(TAG, "Already playing, stopping current playback first")
-            stopPlayback()
+        if (state == PlayerState.PLAYING) {
+            Log.w(TAG, "Already playing")
+            listener?.onPlaybackError("Already playing")
+            return false
+        }
+        if (state == PlayerState.ERROR) {
+            state = PlayerState.IDLE
         }
 
         return try {
-            // Open audio file
             if (!openAudioFile()) {
                 return false
             }
-
-            // Initialize player
             if (!initializeAudioTrack()) {
                 return false
             }
 
-            // Start playback
-            isPlaying.set(true)
+            state = PlayerState.PLAYING
             startPlaybackLoop()
             listener?.onPlaybackStarted()
 
             Log.i(TAG, "Playback started successfully")
             true
         } catch (e: SecurityException) {
-            handleError("[PERMISSION] Permission denied: ${e.message}")
+            handleError("${AudioConstants.ErrorTypes.PERMISSION} Permission denied: ${e.message}")
             false
         } catch (e: Exception) {
-            handleError("[STREAM] Playback initialization failed: ${e.message}")
+            handleError("${AudioConstants.ErrorTypes.STREAM} Playback initialization failed: ${e.message}")
             false
         }
     }
 
-    /**
-     * Stop playback
-     */
     fun stopPlayback() {
         Log.d(TAG, "Stopping playback")
 
-        if (!isPlaying.get()) {
+        if (state != PlayerState.PLAYING) {
             return
         }
 
-        isPlaying.set(false)
+        state = PlayerState.IDLE
         playbackJob?.cancel()
         releaseResources()
         listener?.onPlaybackStopped()
@@ -133,18 +113,19 @@ class AudioPlayer(private val context: Context) {
         Log.i(TAG, "Playback stopped")
     }
 
-    /**
-     * Release all resources
-     */
     fun release() {
-        Log.d(TAG, "Releasing player resources")
         stopPlayback()
-        listener = null  // Clear listener reference to prevent memory leaks
+        listener = null
         try {
             playbackScope.cancel()
         } catch (e: Exception) {
             Log.w(TAG, "Error canceling playback scope", e)
         }
+        Log.d(TAG, "AudioPlayer resources released")
+    }
+
+    fun isPlaying(): Boolean {
+        return state == PlayerState.PLAYING
     }
 
     /**
@@ -154,7 +135,7 @@ class AudioPlayer(private val context: Context) {
         wavFile = WavFile(currentConfig.audioFilePath)
 
         if (!wavFile!!.open() || !wavFile!!.isValid()) {
-            handleError("[FILE] Cannot open audio file: ${currentConfig.audioFilePath}")
+            handleError("${AudioConstants.ErrorTypes.FILE} Cannot open audio file: ${currentConfig.audioFilePath}")
             return false
         }
 
@@ -162,7 +143,6 @@ class AudioPlayer(private val context: Context) {
             TAG,
             "Audio file opened: ${wavFile!!.sampleRate}Hz, ${wavFile!!.bitsPerSample}bit, ${wavFile!!.channelCount}ch"
         )
-        Log.d(TAG, "File path: ${currentConfig.audioFilePath}")
         return true
     }
 
@@ -175,7 +155,7 @@ class AudioPlayer(private val context: Context) {
         try {
             // Request audio focus
             if (!requestAudioFocus()) {
-                handleError("[STREAM] Cannot obtain audio focus")
+                handleError("${AudioConstants.ErrorTypes.FOCUS} Cannot obtain audio focus")
                 return false
             }
 
@@ -193,15 +173,11 @@ class AudioPlayer(private val context: Context) {
 
             if (minBufferSize == AudioTrack.ERROR_BAD_VALUE) {
                 abandonAudioFocus()  // Release focus on parameter error
-                handleError("[PARAM] Unsupported audio parameter combination: ${wavFile.sampleRate}Hz, ${wavFile.channelCount}ch, ${wavFile.bitsPerSample}bit")
+                handleError("${AudioConstants.ErrorTypes.PARAM} Unsupported audio parameter combination: ${wavFile.sampleRate}Hz, ${wavFile.channelCount}ch, ${wavFile.bitsPerSample}bit")
                 return false
             }
 
             val bufferSize = minBufferSize * currentConfig.bufferMultiplier
-            Log.d(
-                TAG,
-                "Buffer calculation: minBufferSize=$minBufferSize, multiplier=${currentConfig.bufferMultiplier}, final=$bufferSize"
-            )
 
             // Create AudioAttributes using configuration parameters
             val audioAttributes =
@@ -219,15 +195,14 @@ class AudioPlayer(private val context: Context) {
 
             if (audioTrack?.state != AudioTrack.STATE_INITIALIZED) {
                 abandonAudioFocus()  // Release focus on initialization failure
-                handleError("[STREAM] AudioTrack initialization failed, state: ${audioTrack?.state}")
+                handleError("${AudioConstants.ErrorTypes.STREAM} AudioTrack initialization failed, state: ${audioTrack?.state}")
                 return false
             }
 
             Log.i(
                 TAG,
-                "AudioTrack initialized successfully - ${wavFile.sampleRate}Hz, ${wavFile.channelDescription}, ${wavFile.bitsPerSample}bit, buffer: $bufferSize bytes"
+                "AudioTrack initialized - ${wavFile.sampleRate}Hz, ${wavFile.channelDescription}, ${wavFile.bitsPerSample}bit"
             )
-            Log.i(TAG, "Using configuration: ${currentConfig.description}")
 
             // Output detailed audio information
             if (wavFile.channelCount >= 10) {
@@ -241,42 +216,31 @@ class AudioPlayer(private val context: Context) {
             return true
         } catch (e: Exception) {
             abandonAudioFocus()  // Release focus on exception
-            handleError("[STREAM] AudioTrack creation failed: ${e.message}")
+            handleError("${AudioConstants.ErrorTypes.STREAM} AudioTrack creation failed: ${e.message}")
             return false
         }
     }
 
-    /**
-     * Validate if audio parameters are supported
-     */
     private fun validateAudioParameters(wavFile: WavFile): Boolean {
-        // Check sample rate
-        if (wavFile.sampleRate !in 8000..192000) {
-            handleError("[PARAM] Unsupported sample rate: ${wavFile.sampleRate}Hz (supported range: 8000-192000Hz)")
+        if (!AudioConstants.isValidSampleRate(wavFile.sampleRate)) {
+            handleError("${AudioConstants.ErrorTypes.PARAM} Unsupported sample rate: ${wavFile.sampleRate}Hz (supported range: 8000-192000Hz)")
             return false
         }
 
-        // Check channel count - extended to 12 channel support
-        if (wavFile.channelCount !in 1..16) {
-            handleError("[PARAM] Unsupported channel count: ${wavFile.channelCount} (supported range: 1-16 channels)")
+        if (!AudioConstants.isValidChannelCount(wavFile.channelCount)) {
+            handleError("${AudioConstants.ErrorTypes.PARAM} Unsupported channel count: ${wavFile.channelCount} (supported range: 1-16 channels)")
             return false
         }
 
-        // Special identification for 12-channel 7.1.4 configuration
         if (wavFile.channelCount == 12) {
             Log.i(TAG, "Detected 7.1.4 audio configuration (12 channels)")
         }
 
-        // Check bit depth
-        if (wavFile.bitsPerSample !in listOf(8, 16, 24, 32)) {
-            handleError("[PARAM] Unsupported bit depth: ${wavFile.bitsPerSample}bit (supported: 8/16/24/32bit)")
+        if (!AudioConstants.isValidBitDepth(wavFile.bitsPerSample)) {
+            handleError("${AudioConstants.ErrorTypes.PARAM} Unsupported bit depth: ${wavFile.bitsPerSample}bit (supported: 8/16/24/32bit)")
             return false
         }
 
-        Log.d(
-            TAG,
-            "Audio parameter validation passed: ${wavFile.sampleRate}Hz, ${wavFile.channelDescription}, ${wavFile.bitsPerSample}bit"
-        )
         return true
     }
 
@@ -300,13 +264,13 @@ class AudioPlayer(private val context: Context) {
 
         val request = AudioFocusRequest.Builder(focusType).setAudioAttributes(audioAttributes)
             .setOnAudioFocusChangeListener(focusChangeListener).setWillPauseWhenDucked(false)
-            .setAcceptsDelayedFocusGain(true).build()
+            .setAcceptsDelayedFocusGain(false).build()
 
         val result =
             audioManager?.requestAudioFocus(request) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
         // Only save request object when focus is successfully obtained
         if (result) {
-            focusRequest = request
+            audioFocusRequest = request
         }
 
         return result
@@ -329,42 +293,23 @@ class AudioPlayer(private val context: Context) {
 
     /**
      * Handle audio focus changes with proper recovery
+     * Note: UI doesn't support pause, so all focus loss results in stop
      */
     private fun handleFocusChange(focusChange: Int) {
         when (focusChange) {
-            AudioManager.AUDIOFOCUS_GAIN -> {
-                Log.d(TAG, "Audio focus gained, restoring playback")
-                audioTrack?.setVolume(1.0f)
-                // Resume playback if it was paused due to transient focus loss
-                if (isPlaying.get() && audioTrack?.playState != AudioTrack.PLAYSTATE_PLAYING) {
-                    audioTrack?.play()
-                }
-            }
-
-            AudioManager.AUDIOFOCUS_GAIN_TRANSIENT -> {
-                Log.d(TAG, "Audio focus gained transiently")
-                audioTrack?.setVolume(1.0f)
-            }
-
-            AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK -> {
-                Log.d(TAG, "Audio focus gained with ducking allowed")
-                audioTrack?.setVolume(1.0f)
-            }
-
             AudioManager.AUDIOFOCUS_LOSS -> {
                 Log.d(TAG, "Audio focus lost, stopping playback")
                 stopPlayback()
             }
 
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
-                Log.d(TAG, "Audio focus lost transiently, pausing playback")
-                // Pause playback instead of stopping for transient focus loss
-                audioTrack?.pause()
+                Log.d(TAG, "Audio focus lost transiently, stopping playback")
+                stopPlayback()
             }
 
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
-                Log.d(TAG, "Audio focus lost with ducking, reducing volume")
-                audioTrack?.setVolume(0.3f)
+                Log.d(TAG, "Audio focus lost with ducking, stopping playback")
+                stopPlayback()
             }
         }
     }
@@ -373,9 +318,9 @@ class AudioPlayer(private val context: Context) {
      * Release audio focus
      */
     private fun abandonAudioFocus() {
-        focusRequest?.let { request ->
+        audioFocusRequest?.let { request ->
             audioManager?.abandonAudioFocusRequest(request)
-            focusRequest = null
+            audioFocusRequest = null
         }
     }
 
@@ -400,20 +345,11 @@ class AudioPlayer(private val context: Context) {
 
             val buffer = ByteArray(writeBufferSize)
             var totalBytes = 0L
-            val startTime = System.currentTimeMillis()
 
             audioTrack.play()
-            Log.i(
-                TAG,
-                "Started playing ${wavFile.channelDescription} audio, config: ${currentConfig.description}"
-            )
-            Log.d(
-                TAG,
-                "AudioTrack buffer: $audioTrackBufferSize bytes, Write buffer: $writeBufferSize bytes"
-            )
 
             try {
-                while (isActive && isPlaying.get()) {
+                while (isActive && state == PlayerState.PLAYING) {
                     val bytesRead = wavFile.readData(buffer, 0, buffer.size)
                     if (bytesRead <= 0) {
                         Log.d(TAG, "File reading completed")
@@ -428,35 +364,21 @@ class AudioPlayer(private val context: Context) {
 
                     totalBytes += bytesRead
 
-                    // Periodically output playback progress (every 1MB)
-                    if (totalBytes % (1024 * 1024L) == 0L && totalBytes > 0) {
-                        val elapsed = (System.currentTimeMillis() - startTime) / 1000.0
+                    // Log progress every 5MB
+                    if (totalBytes % (5 * 1024 * 1024L) == 0L && totalBytes > 0) {
                         val mbPlayed = totalBytes / (1024.0 * 1024.0)
-                        Log.d(
-                            TAG, "Playback progress: ${
-                                String.format(
-                                    java.util.Locale.US, "%.1f", mbPlayed
-                                )
-                            }MB, elapsed: ${String.format(java.util.Locale.US, "%.1f", elapsed)}s"
-                        )
+                        Log.v(TAG, "Progress: %.1fMB".format(mbPlayed))
                     }
                 }
 
-                if (isPlaying.get()) {
-                    val elapsed = (System.currentTimeMillis() - startTime) / 1000.0
+                if (state == PlayerState.PLAYING) {
                     val mbTotal = totalBytes / (1024.0 * 1024.0)
-                    Log.i(
-                        TAG, "Playback completed: ${
-                            String.format(
-                                java.util.Locale.US, "%.1f", mbTotal
-                            )
-                        }MB, total time: ${String.format(java.util.Locale.US, "%.1f", elapsed)}s"
-                    )
+                    Log.i(TAG, "Playback completed: %.1fMB".format(mbTotal))
                     stopPlayback()
                 }
             } catch (e: Exception) {
-                if (isPlaying.get()) {
-                    handleError("[STREAM] Playback error: ${e.message}")
+                if (state == PlayerState.PLAYING) {
+                    handleError("${AudioConstants.ErrorTypes.STREAM} Playback error: ${e.message}")
                 }
             }
         }
@@ -468,7 +390,7 @@ class AudioPlayer(private val context: Context) {
     private fun releaseResources() {
         try {
             audioTrack?.apply {
-                if (state == AudioTrack.STATE_INITIALIZED) {
+                if (this.state == AudioTrack.STATE_INITIALIZED) {
                     stop()
                 }
                 release()
@@ -489,24 +411,9 @@ class AudioPlayer(private val context: Context) {
      * Handle errors consistently
      */
     private fun handleError(message: String) {
-        isPlaying.set(false)  // Stop playback on error
+        state = PlayerState.ERROR
         Log.e(TAG, "Error: $message")
         listener?.onPlaybackError(message)
         releaseResources()
-    }
-
-    /**
-     * Get detailed configuration information
-     */
-    fun getDetailedInfo(): String {
-        return buildString {
-            appendLine("Configuration: ${currentConfig.description}")
-            appendLine("Usage: ${currentConfig.usage}")
-            appendLine("Content Type: ${currentConfig.contentType}")
-            appendLine("Transfer Mode: ${currentConfig.transferMode}")
-            appendLine("Performance Mode: ${currentConfig.performanceMode}")
-            appendLine("Buffer Multiplier: ${currentConfig.bufferMultiplier}x")
-            appendLine("Audio File: ${currentConfig.audioFilePath}")
-        }.trim()
     }
 }

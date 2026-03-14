@@ -5,7 +5,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import com.example.audioplayer.R
 import com.example.audioplayer.config.AudioConfig
 import com.example.audioplayer.player.AudioPlayer
 import com.example.audioplayer.player.PlayerState
@@ -38,7 +37,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     init {
         setupAudioPlayerListener()
         loadConfigurations()
-        _statusMessage.value = getString(R.string.status_ready)
+        _statusMessage.value = "Ready to play"
     }
 
     /**
@@ -54,7 +53,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                     val defaultConfig = configs[0]
                     audioPlayer.setAudioConfig(defaultConfig)
                     _currentConfig.value = defaultConfig
-                    _statusMessage.value = "Configuration loaded: ${configs.size} configs"
+                    _statusMessage.value = "Ready to play"
                 }
             })
         }
@@ -112,18 +111,16 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
 
         updateUI({
-            _statusMessage.value = getString(R.string.status_preparing)
+            _statusMessage.value = "Preparing to Play..."
         })
 
         viewModelScope.launch(Dispatchers.IO) {
             val success = audioPlayer.startPlayback()
             if (!success) {
-                // If startPlayback returns false, error should already be reported via listener
-                // But ensure UI is in correct state
                 updateUI({
                     if (_playerState.value != PlayerState.ERROR) {
                         _playerState.value = PlayerState.ERROR
-                        _statusMessage.value = getString(R.string.error_playback_failed)
+                        _statusMessage.value = "Playback failed"
                     }
                 }, clearError = false)
             }
@@ -133,7 +130,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun stopPlayback() {
         if (_playerState.value != PlayerState.PLAYING) return
 
-        _statusMessage.value = getString(R.string.status_stopping)
+        _statusMessage.value = "Stopping..."
         audioPlayer.stopPlayback()
     }
 
@@ -160,7 +157,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         _errorMessage.value = null
         if (_playerState.value == PlayerState.ERROR) {
             _playerState.value = PlayerState.IDLE
-            _statusMessage.value = getString(R.string.status_ready)
+            _statusMessage.value = "Ready to play"
         }
     }
 
@@ -169,26 +166,34 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         audioPlayer.release()
     }
 
+    fun release() {
+        audioPlayer.release()
+    }
+
+    fun isPlaying(): Boolean {
+        return audioPlayer.isPlaying()
+    }
+
     private fun setupAudioPlayerListener() {
         audioPlayer.setPlaybackListener(object : AudioPlayer.PlaybackListener {
             override fun onPlaybackStarted() {
                 updateUI({
                     _playerState.value = PlayerState.PLAYING
-                    _statusMessage.value = getString(R.string.status_playing)
+                    _statusMessage.value = "Playing..."
                 })
             }
 
             override fun onPlaybackStopped() {
                 updateUI({
                     _playerState.value = PlayerState.IDLE
-                    _statusMessage.value = getString(R.string.status_stopped)
+                    _statusMessage.value = "Playback Stopped"
                 })
             }
 
             override fun onPlaybackError(error: String) {
                 updateUI({
                     _playerState.value = PlayerState.ERROR
-                    _statusMessage.value = getString(R.string.error_playback_failed)
+                    _statusMessage.value = "Playback failed"
                     _errorMessage.value = error
                 }, clearError = false)
             }
@@ -206,6 +211,4 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             }
         }
     }
-
-    private fun getString(resId: Int): String = getApplication<Application>().getString(resId)
 }
